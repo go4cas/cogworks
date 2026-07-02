@@ -83,20 +83,20 @@ async function verifyTokenForWS(token: string, jwtSecret: string): Promise<WSAut
 }
 
 /**
- * True if `origin` is in the configured allowlist. Empty/missing settings →
- * deny cross-origin (WS upgrades from any non-same-origin caller fail).
- * Shares the single CORS origin allowlist — comma-separated `cors.origins`
- * (Admin → Settings → CORS), the same key the HTTP CORS layer reads. `*`
- * permits any origin.
+ * True if `origin` may open a realtime (WS/SSE) connection.
  *
- * Null Origin: handled per call-site — pass `requireOrigin: true` for WS/SSE
- * upgrade paths where browsers ALWAYS send Origin (so a missing header is
- * either a non-browser client we can't authenticate by origin, or a
- * deliberate spoof attempt). Pass false (the default) for cross-cutting
- * checks where same-origin browser fetches may legitimately omit Origin.
+ * A *present* Origin must appear in the `cors.origins` allowlist (Admin →
+ * Settings → CORS, the same key the HTTP CORS layer reads; `*` permits any).
+ * Browsers always send Origin, so this blocks cross-site browser connections.
+ *
+ * A *missing* Origin is allowed: non-browser clients (server-side SDK, native
+ * / mobile apps, CLIs) don't send one, and they can't mount a cross-site
+ * hijack anyway — realtime auth is an explicit `{type:"auth", token}` bearer
+ * message, never an ambient cookie, so there's no session for a foreign page
+ * to ride. Requiring Origin only broke every legitimate non-browser client.
  */
-function isOriginAllowed(origin: string | null, requireOrigin = false): boolean {
-  if (!origin) return !requireOrigin;
+export function isOriginAllowed(origin: string | null): boolean {
+  if (!origin) return true;
   const settings = getAllSettings();
   const raw = settings["cors.origins"] ?? "";
   if (!raw) return false;
@@ -319,10 +319,9 @@ export function createServer(config: Config) {
       // `POST /api/v1/realtime` for setting subscriptions.
       .get("/api/v1/realtime", ({ request, set }) => {
         const origin = request.headers.get("origin");
-        // requireOrigin: true — browsers always send Origin on EventSource;
-        // a missing header here is either a non-browser client we can't
-        // authenticate by origin, or a deliberate spoof attempt.
-        if (!isOriginAllowed(origin, true)) {
+        // Present Origin must be allowlisted (blocks cross-site browsers);
+        // absent Origin (non-browser EventSource clients) is allowed.
+        if (!isOriginAllowed(origin)) {
           set.status = 403;
           return { error: "Origin not allowed", code: 403 };
         }
@@ -381,8 +380,9 @@ export function createServer(config: Config) {
           }
           if (req) {
             const origin = req.headers.get("origin");
-            // requireOrigin: true — browsers always send Origin on WS upgrades.
-            if (!isOriginAllowed(origin, true)) {
+            // Present Origin must be allowlisted (blocks cross-site browsers);
+            // absent Origin (non-browser WS clients) is allowed.
+            if (!isOriginAllowed(origin)) {
               ws.send(JSON.stringify({ type: "error", reason: "origin_not_allowed" }));
               ws.close();
               return;
