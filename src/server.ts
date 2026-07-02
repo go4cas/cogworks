@@ -1,4 +1,6 @@
 import Elysia, { t } from "elysia";
+import { Hono } from "hono";
+import { upgradeWebSocket, websocket as bunWebsocket } from "hono/bun";
 import { openapi } from "@elysiajs/openapi";
 import type { Config } from "./config.ts";
 import { VAULTBASE_VERSION } from "./core/version.ts";
@@ -163,239 +165,244 @@ export function createServer(config: Config) {
     },
     60 * 60 * 1000,
   ).unref?.();
-  return (
-    new Elysia()
-      // Interactive API docs + machine-readable spec at /openapi and
-      // /openapi/json. Starting point — most routes are documented by path
-      // only until they carry Elysia `t.*` body/response schemas.
-      .use(
-        openapi({
-          path: "/openapi",
-          documentation: {
-            info: {
-              title: "Vaultbase API",
-              version: VAULTBASE_VERSION,
-              description: "Self-hosted backend — REST + realtime. Spec is a work in progress.",
-            },
+  const elysiaApp = new Elysia()
+    // Interactive API docs + machine-readable spec at /openapi and
+    // /openapi/json. Starting point — most routes are documented by path
+    // only until they carry Elysia `t.*` body/response schemas.
+    .use(
+      openapi({
+        path: "/openapi",
+        documentation: {
+          info: {
+            title: "Vaultbase API",
+            version: VAULTBASE_VERSION,
+            description: "Self-hosted backend — REST + realtime. Spec is a work in progress.",
           },
-        }),
-      )
-      // Phase 0: register a per-request timer. WeakMap-keyed by Request, so
-      // any handler / records-core call site can record steps via `timeFor`.
-      .onRequest(({ request }) => {
-        attachTimer(request, new RequestTimer());
-      })
-      // CORS preflight short-circuit — must run before any normal route.
-      .onRequest(({ request }) => {
-        const res = handleCorsPreflight(request);
-        if (res) return res;
-      })
-      // Attach security headers globally. CSP applies to non-API surface.
-      .onAfterHandle(({ request, set }) => {
-        const isApi = new URL(request.url).pathname.startsWith("/api/");
-        const headers = securityHeaders({ isApi });
-        for (const [k, v] of Object.entries(headers)) {
-          if (!set.headers[k]) set.headers[k] = v;
-        }
-        // CORS response headers on every request — same envelope as security.
-        applyCorsHeaders(request, set as { headers: Record<string, string | undefined> });
+        },
+      }),
+    )
+    // Phase 0: register a per-request timer. WeakMap-keyed by Request, so
+    // any handler / records-core call site can record steps via `timeFor`.
+    .onRequest(({ request }) => {
+      attachTimer(request, new RequestTimer());
+    })
+    // CORS preflight short-circuit — must run before any normal route.
+    .onRequest(({ request }) => {
+      const res = handleCorsPreflight(request);
+      if (res) return res;
+    })
+    // Attach security headers globally. CSP applies to non-API surface.
+    .onAfterHandle(({ request, set }) => {
+      const isApi = new URL(request.url).pathname.startsWith("/api/");
+      const headers = securityHeaders({ isApi });
+      for (const [k, v] of Object.entries(headers)) {
+        if (!set.headers[k]) set.headers[k] = v;
+      }
+      // CORS response headers on every request — same envelope as security.
+      applyCorsHeaders(request, set as { headers: Record<string, string | undefined> });
 
-        // ⚠ In-process gzip was removed in the perf sprint Phase 1. It blocked
-        // the event loop on `Bun.gzipSync`, regressed RPS by ~14% under load,
-        // and doubled p99.9. Production deployments terminate compression at
-        // the reverse proxy layer (nginx / Caddy / Cloudflare) — see README.md
-        // "Production deployment".
+      // ⚠ In-process gzip was removed in the perf sprint Phase 1. It blocked
+      // the event loop on `Bun.gzipSync`, regressed RPS by ~14% under load,
+      // and doubled p99.9. Production deployments terminate compression at
+      // the reverse proxy layer (nginx / Caddy / Cloudflare) — see README.md
+      // "Production deployment".
 
-        // Roll the request's per-step timings into the global histograms.
-        const t = detachTimer(request);
-        if (t) t.finish();
-      })
-      .onError(({ request, error, code }) => {
-        // Make sure we don't leak timers on error paths.
-        const t = detachTimer(request);
-        if (t) t.finish();
-        // Surface unexpected failures; 404 / validation / parse are routine noise.
-        if (code === "NOT_FOUND" || code === "VALIDATION" || code === "PARSE") return;
-        log.error("request error", {
-          code,
-          method: request.method,
-          path: new URL(request.url).pathname,
-          err: error,
-        });
-      })
-      // Custom user routes fire before built-in route resolution so they can't
-      // collide with /api/:collection or any other built-in pattern.
-      .onRequest(async ({ request }) => {
-        const res = await tryDispatchCustom(request, config.jwtSecret);
-        if (res) return res;
-      })
-      .use(makeRateLimitPlugin())
-      // ── API-token usage telemetry ────────────────────────────────────
-      // Fires AFTER the handler so we don't add latency to the hot path.
-      // Records last_used_at + IP + UA for any request that arrived
-      // bearing a vbat_-prefixed token. Pure observability — failures
-      // never block a request.
-      .onAfterHandle({ as: "global" }, ({ request }) => {
-        const auth = request.headers.get("authorization") ?? "";
-        const m = /^Bearer\s+vbat_([A-Za-z0-9._-]+)/i.exec(auth);
-        if (!m) return;
-        // Decode the JWT payload (no signature verify — that already
-        // happened on the request path; we only need the jti for keying).
-        const jwt = m[1] ?? "";
-        const mid = jwt.split(".")[1] ?? "";
-        let jti = "";
-        try {
-          const padded = mid
-            .replace(/-/g, "+")
-            .replace(/_/g, "/")
-            .padEnd(Math.ceil(mid.length / 4) * 4, "=");
-          const json = JSON.parse(
-            new TextDecoder().decode(Uint8Array.from(atob(padded), (c) => c.charCodeAt(0))),
-          ) as Record<string, unknown>;
-          if (typeof json.jti === "string") jti = json.jti;
-        } catch {
-          /* malformed — skip */
+      // Roll the request's per-step timings into the global histograms.
+      const t = detachTimer(request);
+      if (t) t.finish();
+    })
+    .onError(({ request, error, code }) => {
+      // Make sure we don't leak timers on error paths.
+      const t = detachTimer(request);
+      if (t) t.finish();
+      // Surface unexpected failures; 404 / validation / parse are routine noise.
+      if (code === "NOT_FOUND" || code === "VALIDATION" || code === "PARSE") return;
+      log.error("request error", {
+        code,
+        method: request.method,
+        path: new URL(request.url).pathname,
+        err: error,
+      });
+    })
+    // Custom user routes fire before built-in route resolution so they can't
+    // collide with /api/:collection or any other built-in pattern.
+    .onRequest(async ({ request }) => {
+      const res = await tryDispatchCustom(request, config.jwtSecret);
+      if (res) return res;
+    })
+    .use(makeRateLimitPlugin())
+    // ── API-token usage telemetry ────────────────────────────────────
+    // Fires AFTER the handler so we don't add latency to the hot path.
+    // Records last_used_at + IP + UA for any request that arrived
+    // bearing a vbat_-prefixed token. Pure observability — failures
+    // never block a request.
+    .onAfterHandle({ as: "global" }, ({ request }) => {
+      const auth = request.headers.get("authorization") ?? "";
+      const m = /^Bearer\s+vbat_([A-Za-z0-9._-]+)/i.exec(auth);
+      if (!m) return;
+      // Decode the JWT payload (no signature verify — that already
+      // happened on the request path; we only need the jti for keying).
+      const jwt = m[1] ?? "";
+      const mid = jwt.split(".")[1] ?? "";
+      let jti = "";
+      try {
+        const padded = mid
+          .replace(/-/g, "+")
+          .replace(/_/g, "/")
+          .padEnd(Math.ceil(mid.length / 4) * 4, "=");
+        const json = JSON.parse(
+          new TextDecoder().decode(Uint8Array.from(atob(padded), (c) => c.charCodeAt(0))),
+        ) as Record<string, unknown>;
+        if (typeof json.jti === "string") jti = json.jti;
+      } catch {
+        /* malformed — skip */
+      }
+      if (!jti) return;
+      const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+      const ua = request.headers.get("user-agent");
+      recordApiTokenUsage(jti, ip, ua);
+    })
+    // ── Versioned API surface ───────────────────────────────────────────
+    // Every plugin route is declared without the `/api/...` prefix; the
+    // group below adds `/api/v1`. Future v2 lives in a sibling group.
+    .group("/api/v1", (app) =>
+      app
+        .use(makeLogsPlugin(config.jwtSecret))
+        .use(makeAuthPlugin(config.jwtSecret))
+        .use(makeAdminsPlugin(config.jwtSecret))
+        .use(makeBackupPlugin(config.jwtSecret, config.dbPath))
+        .use(makeIndexesPlugin(config.jwtSecret))
+        .use(makeSettingsPlugin(config.jwtSecret))
+        .use(makeHooksPlugin(config.jwtSecret))
+        .use(makeRoutesPlugin(config.jwtSecret))
+        .use(makeJobsPlugin(config.jwtSecret))
+        .use(makeQueuesPlugin(config.jwtSecret))
+        .use(makeBatchPlugin(config.jwtSecret))
+        .use(makeCsvPlugin(config.jwtSecret))
+        .use(makeMigrationsPlugin(config.jwtSecret))
+        .use(makeMetricsPlugin(config.jwtSecret))
+        .use(makeAuditLogPlugin(config.jwtSecret))
+        .use(makeApiTokensPlugin(config.jwtSecret))
+        .use(makeMcpPlugin(config.jwtSecret))
+        .use(makeMcpAdminPlugin(config.jwtSecret))
+        .use(makeSqlPlugin(config.jwtSecret, config.dbPath))
+        .use(makeSecurityPlugin(config.jwtSecret, config.encryptionKey))
+        .use(makeThemePlugin())
+        .use(makeFlagsPlugin(config.jwtSecret))
+        .use(makeWebhooksPlugin(config.jwtSecret))
+        .use(makeNotificationsPlugin(config.jwtSecret))
+        .use(makeCollectionsPlugin(config.jwtSecret))
+        .use(makeFilesPlugin(config.uploadDir, config.jwtSecret))
+        .use(makeRecordsPlugin(config.jwtSecret)),
+    )
+    .use(makeAdminPlugin())
+    .use(makeAuthPagesPlugin())
+    // Exemplar of the OpenAPI annotation pattern: a `detail` tag/summary plus
+    // a `response` schema turns an auto-discovered path into a fully-typed
+    // spec entry. Most routes still need this treatment (tracked follow-up).
+    .get("/api/health", () => ({ data: { status: "ok", version: VAULTBASE_VERSION } }), {
+      detail: { tags: ["Meta"], summary: "Liveness probe + server version" },
+      response: t.Object({
+        data: t.Object({ status: t.String(), version: t.String() }),
+      }),
+    })
+    // Cluster health probe — admin proxies / load-balancers hit this. Worker
+    // id (if running under cluster mode) helps debug which worker answered.
+    .get("/_/health", () => ({
+      data: {
+        status: "ok",
+        worker_id: process.env.VAULTBASE_WORKER_ID ?? null,
+        pid: process.pid,
+        uptime_s: Math.floor(process.uptime()),
+      },
+    }))
+    // SSE fallback for clients that can't open WebSockets. Pairs with
+    // `POST /api/v1/realtime` for setting subscriptions.
+    .get("/api/v1/realtime", ({ request, set }) => {
+      const origin = request.headers.get("origin");
+      // Present Origin must be allowlisted (blocks cross-site browsers);
+      // absent Origin (non-browser EventSource clients) is allowed.
+      if (!isOriginAllowed(origin)) {
+        set.status = 403;
+        return { error: "Origin not allowed", code: 403 };
+      }
+      const { response } = openSSEStream();
+      set.headers["content-type"] = "text/event-stream; charset=utf-8";
+      return response;
+    })
+    .post(
+      "/api/v1/realtime",
+      async ({ body, set }) => {
+        const adapter = getSSEClient(body.clientId);
+        if (!adapter) {
+          set.status = 404;
+          return { error: "Unknown clientId — open GET /api/v1/realtime first", code: 404 };
         }
-        if (!jti) return;
-        const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
-        const ua = request.headers.get("user-agent");
-        recordApiTokenUsage(jti, ip, ua);
-      })
-      // ── Versioned API surface ───────────────────────────────────────────
-      // Every plugin route is declared without the `/api/...` prefix; the
-      // group below adds `/api/v1`. Future v2 lives in a sibling group.
-      .group("/api/v1", (app) =>
-        app
-          .use(makeLogsPlugin(config.jwtSecret))
-          .use(makeAuthPlugin(config.jwtSecret))
-          .use(makeAdminsPlugin(config.jwtSecret))
-          .use(makeBackupPlugin(config.jwtSecret, config.dbPath))
-          .use(makeIndexesPlugin(config.jwtSecret))
-          .use(makeSettingsPlugin(config.jwtSecret))
-          .use(makeHooksPlugin(config.jwtSecret))
-          .use(makeRoutesPlugin(config.jwtSecret))
-          .use(makeJobsPlugin(config.jwtSecret))
-          .use(makeQueuesPlugin(config.jwtSecret))
-          .use(makeBatchPlugin(config.jwtSecret))
-          .use(makeCsvPlugin(config.jwtSecret))
-          .use(makeMigrationsPlugin(config.jwtSecret))
-          .use(makeMetricsPlugin(config.jwtSecret))
-          .use(makeAuditLogPlugin(config.jwtSecret))
-          .use(makeApiTokensPlugin(config.jwtSecret))
-          .use(makeMcpPlugin(config.jwtSecret))
-          .use(makeMcpAdminPlugin(config.jwtSecret))
-          .use(makeSqlPlugin(config.jwtSecret, config.dbPath))
-          .use(makeSecurityPlugin(config.jwtSecret, config.encryptionKey))
-          .use(makeThemePlugin())
-          .use(makeFlagsPlugin(config.jwtSecret))
-          .use(makeWebhooksPlugin(config.jwtSecret))
-          .use(makeNotificationsPlugin(config.jwtSecret))
-          .use(makeCollectionsPlugin(config.jwtSecret))
-          .use(makeFilesPlugin(config.uploadDir, config.jwtSecret))
-          .use(makeRecordsPlugin(config.jwtSecret)),
-      )
-      .use(makeAdminPlugin())
-      .use(makeAuthPagesPlugin())
-      // Exemplar of the OpenAPI annotation pattern: a `detail` tag/summary plus
-      // a `response` schema turns an auto-discovered path into a fully-typed
-      // spec entry. Most routes still need this treatment (tracked follow-up).
-      .get("/api/health", () => ({ data: { status: "ok", version: VAULTBASE_VERSION } }), {
-        detail: { tags: ["Meta"], summary: "Liveness probe + server version" },
-        response: t.Object({
-          data: t.Object({ status: t.String(), version: t.String() }),
+        // Optional fresh auth (parallel to WS `{type:"auth"}`).
+        if (body.token) {
+          const auth = await verifyTokenForWS(body.token, config.jwtSecret);
+          setWSAuth(adapter, auth);
+        }
+        const topics = body.topics ?? body.subscriptions ?? body.collections ?? [];
+        setSSESubscriptions(body.clientId, topics);
+        return { data: { clientId: body.clientId, topics } };
+      },
+      {
+        body: t.Object({
+          clientId: t.String(),
+          topics: t.Optional(t.Array(t.String())),
+          subscriptions: t.Optional(t.Array(t.String())), // PB-compat alias
+          collections: t.Optional(t.Array(t.String())), // legacy alias
+          token: t.Optional(t.String()),
         }),
-      })
-      // Cluster health probe — admin proxies / load-balancers hit this. Worker
-      // id (if running under cluster mode) helps debug which worker answered.
-      .get("/_/health", () => ({
-        data: {
-          status: "ok",
-          worker_id: process.env.VAULTBASE_WORKER_ID ?? null,
-          pid: process.pid,
-          uptime_s: Math.floor(process.uptime()),
-        },
-      }))
-      // SSE fallback for clients that can't open WebSockets. Pairs with
-      // `POST /api/v1/realtime` for setting subscriptions.
-      .get("/api/v1/realtime", ({ request, set }) => {
-        const origin = request.headers.get("origin");
-        // Present Origin must be allowlisted (blocks cross-site browsers);
-        // absent Origin (non-browser EventSource clients) is allowed.
-        if (!isOriginAllowed(origin)) {
-          set.status = 403;
-          return { error: "Origin not allowed", code: 403 };
-        }
-        const { response } = openSSEStream();
-        set.headers["content-type"] = "text/event-stream; charset=utf-8";
-        return response;
-      })
-      .post(
-        "/api/v1/realtime",
-        async ({ body, set }) => {
-          const adapter = getSSEClient(body.clientId);
-          if (!adapter) {
-            set.status = 404;
-            return { error: "Unknown clientId — open GET /api/v1/realtime first", code: 404 };
+      },
+    )
+    .delete("/api/v1/realtime/:clientId", ({ params }) => {
+      unregisterSSEClient(params.clientId);
+      return { data: null };
+    });
+
+  // ── Hono root ──────────────────────────────────────────────────────────
+  // Hono owns Bun.serve + the WebSocket; every HTTP request it doesn't have a
+  // native route for falls through to the mounted Elysia app. During the
+  // migration, plugins move from mounted-Elysia to native Hono one at a time;
+  // when Elysia is empty it's deleted. (WS must live on Hono because a mounted
+  // Elysia can't perform the Bun upgrade.)
+  const app = new Hono();
+
+  // The realtime manager keys subscriptions by `ws.data.connId` on a `WSLike
+  // {send}`. Hono hands a fresh WSContext per event, so we key a stable adapter
+  // off the underlying Bun socket (`ws.raw`) and pass THAT to the manager.
+  const wsAdapters = new WeakMap<object, { send: (d: string) => void; data: { connId: string } }>();
+  const rawKey = (ws: { raw?: unknown }): object => (ws.raw ?? ws) as object;
+
+  app.get(
+    "/realtime",
+    upgradeWebSocket((c) => {
+      // Browsers always send Origin on WS upgrades; absent Origin = non-browser
+      // client (allowed — they auth by bearer token, can't do cross-site hijack).
+      const origin = c.req.header("origin") ?? null;
+      return {
+        onOpen(_evt, ws) {
+          const adapter = {
+            send: (d: string) => ws.send(d),
+            data: { connId: crypto.randomUUID() },
+          };
+          wsAdapters.set(rawKey(ws), adapter);
+          if (!isOriginAllowed(origin)) {
+            ws.send(JSON.stringify({ type: "error", reason: "origin_not_allowed" }));
+            ws.close();
+            return;
           }
-          // Optional fresh auth (parallel to WS `{type:"auth"}`).
-          if (body.token) {
-            const auth = await verifyTokenForWS(body.token, config.jwtSecret);
-            setWSAuth(adapter, auth);
-          }
-          const topics = body.topics ?? body.subscriptions ?? body.collections ?? [];
-          setSSESubscriptions(body.clientId, topics);
-          return { data: { clientId: body.clientId, topics } };
-        },
-        {
-          body: t.Object({
-            clientId: t.String(),
-            topics: t.Optional(t.Array(t.String())),
-            subscriptions: t.Optional(t.Array(t.String())), // PB-compat alias
-            collections: t.Optional(t.Array(t.String())), // legacy alias
-            token: t.Optional(t.String()),
-          }),
-        },
-      )
-      .delete("/api/v1/realtime/:clientId", ({ params }) => {
-        unregisterSSEClient(params.clientId);
-        return { data: null };
-      })
-      .ws("/realtime", {
-        async open(ws) {
-          const req = (ws.data as { request?: Request } | undefined)?.request;
-          // Mint a stable per-connection id and stash it in Bun's persistent
-          // `ws.data` slot. The realtime manager keys subscriptions by this
-          // id, not by the `ws` object reference — Bun/Elysia hands different
-          // wrappers to `open` vs `message`, so identity-based keying drops
-          // unsubscribe + disconnectAll on the floor.
-          //
-          // This MUST happen before the origin gate below: rejecting an origin
-          // calls ws.close(), and Bun still fires the `close` handler, whose
-          // disconnectAll() reads ws.data.connId — without an id it throws.
-          const wsAny = ws as unknown as { data: { connId?: string } | undefined };
-          if (!wsAny.data || typeof wsAny.data !== "object") {
-            (wsAny as { data: object }).data = { connId: crypto.randomUUID() };
-          } else {
-            wsAny.data.connId = crypto.randomUUID();
-          }
-          if (req) {
-            const origin = req.headers.get("origin");
-            // Present Origin must be allowlisted (blocks cross-site browsers);
-            // absent Origin (non-browser WS clients) is allowed.
-            if (!isOriginAllowed(origin)) {
-              ws.send(JSON.stringify({ type: "error", reason: "origin_not_allowed" }));
-              ws.close();
-              return;
-            }
-          }
-          // Auth via {type:"auth", token} message. Tokens in the URL query are
-          // no longer accepted (logs/Referer leak risk).
           ws.send(JSON.stringify({ type: "connected" }));
         },
-        async message(ws, message) {
+        async onMessage(evt, ws) {
+          const adapter = wsAdapters.get(rawKey(ws));
+          if (!adapter) return;
           let msg: ClientMessage;
           try {
-            msg = (typeof message === "string" ? JSON.parse(message) : message) as ClientMessage;
+            const data = typeof evt.data === "string" ? evt.data : "";
+            msg = JSON.parse(data) as ClientMessage;
           } catch {
             return;
           }
@@ -403,14 +410,11 @@ export function createServer(config: Config) {
           if (msg.type === "auth") {
             if (typeof msg.token !== "string") return;
             const auth = await verifyTokenForWS(msg.token, config.jwtSecret);
-            setWSAuth(ws, auth);
+            setWSAuth(adapter, auth);
             return;
           }
-          // Debug introspection: tell the client which topics THIS connection
-          // is subscribed to. Useful when unsubscribe returns an empty array
-          // and the client wants to confirm what's actually attached.
           if (msg.type === "list-subs") {
-            ws.send(JSON.stringify({ type: "subs", topics: listSubsFor(ws) }));
+            ws.send(JSON.stringify({ type: "subs", topics: listSubsFor(adapter) }));
             return;
           }
           const topics = msg.topics ?? msg.collections;
@@ -425,16 +429,26 @@ export function createServer(config: Config) {
             return;
           }
           if (msg.type === "subscribe") {
-            const accepted = subscribe(ws, topics);
+            const accepted = subscribe(adapter, topics);
             ws.send(JSON.stringify({ type: "subscribed", topics: accepted }));
           } else if (msg.type === "unsubscribe") {
-            const removed = unsubscribe(ws, topics);
+            const removed = unsubscribe(adapter, topics);
             ws.send(JSON.stringify({ type: "unsubscribed", topics: removed }));
           }
         },
-        close(ws) {
-          disconnectAll(ws);
+        onClose(_evt, ws) {
+          const adapter = wsAdapters.get(rawKey(ws));
+          if (adapter) {
+            disconnectAll(adapter);
+            wsAdapters.delete(rawKey(ws));
+          }
         },
-      })
+      };
+    }),
   );
+
+  // Everything not matched above → the existing Elysia app.
+  app.mount("/", elysiaApp.fetch);
+
+  return { fetch: app.fetch, websocket: bunWebsocket };
 }
