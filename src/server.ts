@@ -16,10 +16,10 @@ import { makeRecordsPlugin } from "./api/records.ts";
 import { makeFilesPlugin, pruneFileTokenUses } from "./api/files.ts";
 import { makeAdminPlugin } from "./admin/index.ts";
 import { makeAuthPagesPlugin } from "./admin/auth-pages.ts";
-import { makeLogsPlugin } from "./api/logs.ts";
+import { makeLogsPlugin, accessLogMiddleware } from "./api/logs.ts";
 import { makeAdminsPlugin } from "./api/admins.ts";
 import { makeBackupPlugin } from "./api/backup.ts";
-import { makeRateLimitPlugin } from "./api/ratelimit.ts";
+import { rateLimitMiddleware } from "./api/ratelimit.ts";
 import { makeIndexesPlugin } from "./api/indexes.ts";
 import { makeSettingsPlugin } from "./api/settings.ts";
 import { makeHooksPlugin } from "./api/hooks.ts";
@@ -30,7 +30,7 @@ import { makeBatchPlugin } from "./api/batch.ts";
 import { makeCsvPlugin } from "./api/csv.ts";
 import { makeMigrationsPlugin } from "./api/migrations.ts";
 import { makeMetricsPlugin } from "./api/metrics.ts";
-import { makeAuditLogPlugin } from "./api/audit-log.ts";
+import { makeAuditLogPlugin, auditLogMiddleware } from "./api/audit-log.ts";
 import { makeApiTokensPlugin } from "./api/api-tokens.ts";
 import { makeMcpPlugin } from "./api/mcp.ts";
 import { makeMcpAdminPlugin } from "./api/mcp-admin.ts";
@@ -125,6 +125,39 @@ function startFileTokenUsesPrune(): void {
   }, HOUR_MS).unref?.();
 }
 
+/**
+ * API-token usage telemetry. Runs after the handler so it never adds latency.
+ * Records last_used_at + IP + UA for any request bearing a `vbat_`-prefixed
+ * token. Pure observability — failures never block a request. (Was an Elysia
+ * global `onAfterHandle`; now called from the Hono root `core` middleware.)
+ */
+function recordApiTokenTelemetry(request: Request): void {
+  const auth = request.headers.get("authorization") ?? "";
+  const m = /^Bearer\s+vbat_([A-Za-z0-9._-]+)/i.exec(auth);
+  if (!m) return;
+  // Decode the JWT payload (no signature verify — that already happened on the
+  // request path; we only need the jti for keying).
+  const jwt = m[1] ?? "";
+  const mid = jwt.split(".")[1] ?? "";
+  let jti = "";
+  try {
+    const padded = mid
+      .replace(/-/g, "+")
+      .replace(/_/g, "/")
+      .padEnd(Math.ceil(mid.length / 4) * 4, "=");
+    const json = JSON.parse(
+      new TextDecoder().decode(Uint8Array.from(atob(padded), (c) => c.charCodeAt(0))),
+    ) as Record<string, unknown>;
+    if (typeof json.jti === "string") jti = json.jti;
+  } catch {
+    /* malformed — skip */
+  }
+  if (!jti) return;
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+  const ua = request.headers.get("user-agent");
+  recordApiTokenUsage(jti, ip, ua);
+}
+
 export function createServer(config: Config) {
   setLogsDir(config.logsDir);
   setUploadDir(config.uploadDir);
@@ -181,96 +214,15 @@ export function createServer(config: Config) {
         },
       }),
     )
-    // Phase 0: register a per-request timer. WeakMap-keyed by Request, so
-    // any handler / records-core call site can record steps via `timeFor`.
-    .onRequest(({ request }) => {
-      attachTimer(request, new RequestTimer());
-    })
-    // CORS preflight short-circuit — must run before any normal route.
-    .onRequest(({ request }) => {
-      const res = handleCorsPreflight(request);
-      if (res) return res;
-    })
-    // Attach security headers globally. CSP applies to non-API surface.
-    .onAfterHandle(({ request, set }) => {
-      const isApi = new URL(request.url).pathname.startsWith("/api/");
-      const headers = securityHeaders({ isApi });
-      for (const [k, v] of Object.entries(headers)) {
-        if (!set.headers[k]) set.headers[k] = v;
-      }
-      // CORS response headers on every request — same envelope as security.
-      applyCorsHeaders(request, set as { headers: Record<string, string | undefined> });
-
-      // ⚠ In-process gzip was removed in the perf sprint Phase 1. It blocked
-      // the event loop on `Bun.gzipSync`, regressed RPS by ~14% under load,
-      // and doubled p99.9. Production deployments terminate compression at
-      // the reverse proxy layer (nginx / Caddy / Cloudflare) — see README.md
-      // "Production deployment".
-
-      // Roll the request's per-step timings into the global histograms.
-      const t = detachTimer(request);
-      if (t) t.finish();
-    })
-    .onError(({ request, error, code }) => {
-      // Make sure we don't leak timers on error paths.
-      const t = detachTimer(request);
-      if (t) t.finish();
-      // Surface unexpected failures; 404 / validation / parse are routine noise.
-      if (code === "NOT_FOUND" || code === "VALIDATION" || code === "PARSE") return;
-      log.error("request error", {
-        code,
-        method: request.method,
-        path: new URL(request.url).pathname,
-        err: error,
-      });
-    })
-    // Custom user routes fire before built-in route resolution so they can't
-    // collide with /api/:collection or any other built-in pattern.
-    .onRequest(async ({ request }) => {
-      const res = await tryDispatchCustom(request, config.jwtSecret);
-      if (res) return res;
-    })
-    .use(makeRateLimitPlugin())
-    // ── API-token usage telemetry ────────────────────────────────────
-    // Fires AFTER the handler so we don't add latency to the hot path.
-    // Records last_used_at + IP + UA for any request that arrived
-    // bearing a vbat_-prefixed token. Pure observability — failures
-    // never block a request.
-    .onAfterHandle({ as: "global" }, ({ request }) => {
-      const auth = request.headers.get("authorization") ?? "";
-      const m = /^Bearer\s+vbat_([A-Za-z0-9._-]+)/i.exec(auth);
-      if (!m) return;
-      // Decode the JWT payload (no signature verify — that already
-      // happened on the request path; we only need the jti for keying).
-      const jwt = m[1] ?? "";
-      const mid = jwt.split(".")[1] ?? "";
-      let jti = "";
-      try {
-        const padded = mid
-          .replace(/-/g, "+")
-          .replace(/_/g, "/")
-          .padEnd(Math.ceil(mid.length / 4) * 4, "=");
-        const json = JSON.parse(
-          new TextDecoder().decode(Uint8Array.from(atob(padded), (c) => c.charCodeAt(0))),
-        ) as Record<string, unknown>;
-        if (typeof json.jti === "string") jti = json.jti;
-      } catch {
-        /* malformed — skip */
-      }
-      if (!jti) return;
-      const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
-      const ua = request.headers.get("user-agent");
-      recordApiTokenUsage(jti, ip, ua);
-    })
+    // Cross-cutting concerns (perf timer, CORS preflight/headers, custom
+    // routes, rate limit, security headers, access log, audit log, API-token
+    // telemetry) used to live here as Elysia global hooks. They now run on the
+    // Hono root `app` (see `coreMiddleware` + the `app.use(...)` chain below) so
+    // they wrap BOTH native Hono routes AND this mounted Elysia app.
     // ── Versioned API surface ───────────────────────────────────────────
     // Every plugin route is declared without the `/api/...` prefix; the
     // group below adds `/api/v1`. Future v2 lives in a sibling group.
-    .group("/api/v1", (app) =>
-      app
-        .use(makeLogsPlugin(config.jwtSecret))
-        .use(makeAuditLogPlugin(config.jwtSecret))
-        .use(makeRecordsPlugin(config.jwtSecret)),
-    )
+    .group("/api/v1", (app) => app.use(makeRecordsPlugin(config.jwtSecret)))
     .use(makeAdminPlugin())
     .use(makeAuthPagesPlugin())
     // Exemplar of the OpenAPI annotation pattern: a `detail` tag/summary plus
@@ -346,17 +298,74 @@ export function createServer(config: Config) {
   // Elysia can't perform the Bun upgrade.)
   const app = new Hono();
 
-  // Plugins already migrated to native Hono. A mounted handler bypasses Elysia's
-  // lifecycle, so this sub-app re-applies the security headers the Elysia
-  // `onAfterHandle` adds. Migrated routes are matched before the Elysia mount.
-  const migrated = new Hono();
-  migrated.use("*", async (c, next) => {
-    await next();
-    const isApi = c.req.path.startsWith("/api/");
-    for (const [k, v] of Object.entries(securityHeaders({ isApi }))) {
-      if (!c.res.headers.has(k)) c.res.headers.set(k, v);
+  // ── Root cross-cutting pipeline ────────────────────────────────────────
+  // These `app.use` middlewares wrap EVERYTHING below — the native `migrated`
+  // sub-app, the WS route, AND the mounted Elysia — so every request gets the
+  // same lifecycle regardless of which framework serves it. This replaces the
+  // Elysia global hooks that only fired for Elysia-served routes. Registration
+  // order = onion order: `core` (outermost) → rate limit → access log → audit.
+  app.use("*", async (c, next) => {
+    const request = c.req.raw;
+    // Phase 0: per-request timer, WeakMap-keyed by Request so any handler /
+    // records-core call site can record steps via `timeFor`.
+    attachTimer(request, new RequestTimer());
+    // CORS preflight short-circuit — before any normal route.
+    const pre = handleCorsPreflight(request);
+    if (pre) {
+      detachTimer(request)?.finish();
+      return pre;
     }
+    // Custom user routes fire before built-in route resolution so they can't
+    // collide with /api/:collection or any other built-in pattern.
+    const custom = await tryDispatchCustom(request, config.jwtSecret);
+    if (custom) {
+      detachTimer(request)?.finish();
+      return custom;
+    }
+
+    await next();
+
+    // A WebSocket upgrade (101) response must be returned untouched.
+    let status = 0;
+    try {
+      status = c.res.status;
+    } catch {
+      status = 0;
+    }
+    if (status !== 101) {
+      const isApi = new URL(request.url).pathname.startsWith("/api/");
+      for (const [k, v] of Object.entries(securityHeaders({ isApi }))) {
+        if (!c.res.headers.has(k)) c.res.headers.set(k, v);
+      }
+      // CORS response headers on every request — same envelope as security.
+      const corsSet = { headers: {} as Record<string, string | undefined> };
+      applyCorsHeaders(request, corsSet);
+      for (const [k, v] of Object.entries(corsSet.headers)) {
+        if (v !== undefined) c.res.headers.set(k, v);
+      }
+      recordApiTokenTelemetry(request);
+    }
+    detachTimer(request)?.finish();
   });
+  app.use("*", rateLimitMiddleware());
+  app.use("*", accessLogMiddleware(config.jwtSecret));
+  app.use("*", auditLogMiddleware(config.jwtSecret));
+  app.onError((error, c) => {
+    // Native-route handler threw — Elysia catches its own errors internally, so
+    // this only fires for Hono routes. Finish the timer (the `core` post-phase
+    // was skipped by the throw) and surface unexpected failures.
+    const request = c.req.raw;
+    detachTimer(request)?.finish();
+    log.error("request error", {
+      method: request.method,
+      path: new URL(request.url).pathname,
+      err: error,
+    });
+    return c.json({ error: "Internal Server Error", code: 500 }, 500);
+  });
+
+  // Plugins migrated to native Hono. Matched before the Elysia mount.
+  const migrated = new Hono();
   migrated.route("/api/v1", makeThemePlugin());
   migrated.route("/api/v1", makeMetricsPlugin(config.jwtSecret));
   migrated.route("/api/v1", makeBackupPlugin(config.jwtSecret, config.dbPath));
@@ -381,6 +390,8 @@ export function createServer(config: Config) {
   migrated.route("/api/v1", makeSqlPlugin(config.jwtSecret, config.dbPath));
   migrated.route("/api/v1", makeFilesPlugin(config.uploadDir, config.jwtSecret));
   migrated.route("/api/v1", makeAuthPlugin(config.jwtSecret));
+  migrated.route("/api/v1", makeLogsPlugin(config.jwtSecret));
+  migrated.route("/api/v1", makeAuditLogPlugin(config.jwtSecret));
   app.route("/", migrated);
 
   // The realtime manager keys subscriptions by `ws.data.connId` on a `WSLike
