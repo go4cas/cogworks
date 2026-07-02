@@ -1,9 +1,7 @@
-import Elysia from "elysia";
 import { Hono } from "hono";
 import { Type as t } from "@sinclair/typebox";
 import { jsonBody } from "./api/validator.ts";
 import { upgradeWebSocket, websocket as bunWebsocket } from "hono/bun";
-import { openapi } from "@elysiajs/openapi";
 import type { Config } from "./config.ts";
 import { VAULTBASE_VERSION } from "./core/version.ts";
 import { securityHeaders, verifyAuthToken } from "./core/sec.ts";
@@ -200,28 +198,17 @@ export function createServer(config: Config) {
     },
     60 * 60 * 1000,
   ).unref?.();
-  const elysiaApp = new Elysia()
-    // Interactive API docs + machine-readable spec at /openapi and
-    // /openapi/json. Starting point — most routes are documented by path
-    // only until they carry Elysia `t.*` body/response schemas.
-    .use(
-      openapi({
-        path: "/openapi",
-        documentation: {
-          info: {
-            title: "Vaultbase API",
-            version: VAULTBASE_VERSION,
-            description: "Self-hosted backend — REST + realtime. Spec is a work in progress.",
-          },
-        },
-      }),
-    );
-  // Every other route (records, auth, files, admin SPA, auth pages, realtime,
-  // health, …) is now native Hono. Cross-cutting concerns that used to be
-  // Elysia global hooks (perf timer, CORS, custom routes, rate limit, security
-  // headers, access log, audit log, API-token telemetry) run on the Hono root
-  // `app` (see `coreMiddleware` + the `app.use(...)` chain below), wrapping BOTH
-  // native routes and this mounted Elysia. Only `/openapi` remains on Elysia.
+  // Every route (records, auth, files, admin SPA, auth pages, realtime, health,
+  // …) is now native Hono — Elysia has been fully removed. Cross-cutting
+  // concerns that used to be Elysia global hooks (perf timer, CORS, custom
+  // routes, rate limit, security headers, access log, audit log, API-token
+  // telemetry) run on the Hono root `app` (see `coreMiddleware` + the
+  // `app.use(...)` chain below).
+  //
+  // ponytail: the `/openapi` docs endpoint (was `@elysiajs/openapi`) was dropped
+  // with Elysia — it auto-generated from Elysia routes and would document zero
+  // now. Re-add native OpenAPI (e.g. hono-openapi) deliberately if/when routes
+  // carry response schemas worth publishing.
 
   // ── Hono root ──────────────────────────────────────────────────────────
   // Hono owns Bun.serve + the WebSocket; every HTTP request it doesn't have a
@@ -478,9 +465,6 @@ export function createServer(config: Config) {
       };
     }),
   );
-
-  // Everything not matched above → the existing Elysia app.
-  app.mount("/", elysiaApp.fetch);
 
   return { fetch: app.fetch, websocket: bunWebsocket };
 }
