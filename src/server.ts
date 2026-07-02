@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
 import { Type as t } from "@sinclair/typebox";
 import { jsonBody } from "./api/validator.ts";
 import { upgradeWebSocket, websocket as bunWebsocket } from "hono/bun";
@@ -211,19 +212,14 @@ export function createServer(config: Config) {
   // carry response schemas worth publishing.
 
   // ── Hono root ──────────────────────────────────────────────────────────
-  // Hono owns Bun.serve + the WebSocket; every HTTP request it doesn't have a
-  // native route for falls through to the mounted Elysia app. During the
-  // migration, plugins move from mounted-Elysia to native Hono one at a time;
-  // when Elysia is empty it's deleted. (WS must live on Hono because a mounted
-  // Elysia can't perform the Bun upgrade.)
+  // Hono owns Bun.serve + the WebSocket and serves every route natively.
   const app = new Hono();
 
   // ── Root cross-cutting pipeline ────────────────────────────────────────
   // These `app.use` middlewares wrap EVERYTHING below — the native `migrated`
-  // sub-app, the WS route, AND the mounted Elysia — so every request gets the
-  // same lifecycle regardless of which framework serves it. This replaces the
-  // Elysia global hooks that only fired for Elysia-served routes. Registration
-  // order = onion order: `core` (outermost) → rate limit → access log → audit.
+  // sub-app and the WS route — so every request gets the same lifecycle. This
+  // replaces the old Elysia global hooks. Registration order = onion order:
+  // `core` (outermost) → access log → audit → rate limit (innermost).
   app.use("*", async (c, next) => {
     const request = c.req.raw;
     // Phase 0: per-request timer, WeakMap-keyed by Request so any handler /
@@ -258,7 +254,14 @@ export function createServer(config: Config) {
         if (!c.res.headers.has(k)) c.res.headers.set(k, v);
       }
       // CORS response headers on every request — same envelope as security.
-      const corsSet = { headers: {} as Record<string, string | undefined> };
+      // Seed the shim with any `Vary` the handler already set so
+      // `applyCorsHeaders` merges (rather than clobbers) it.
+      const corsSet = {
+        headers: { Vary: c.res.headers.get("Vary") ?? undefined } as Record<
+          string,
+          string | undefined
+        >,
+      };
       applyCorsHeaders(request, corsSet);
       for (const [k, v] of Object.entries(corsSet.headers)) {
         if (v !== undefined) c.res.headers.set(k, v);
@@ -267,15 +270,23 @@ export function createServer(config: Config) {
     }
     detachTimer(request)?.finish();
   });
-  app.use("*", rateLimitMiddleware());
+  // Access + audit logging are registered OUTER to the rate limiter so their
+  // `finally` blocks still run when `rateLimitMiddleware` short-circuits a 429
+  // without calling next() — otherwise blocked requests (exactly the traffic an
+  // operator wants to see during abuse) would vanish from /admin/logs + audit.
   app.use("*", accessLogMiddleware(config.jwtSecret));
   app.use("*", auditLogMiddleware(config.jwtSecret));
+  app.use("*", rateLimitMiddleware());
   app.onError((error, c) => {
-    // Native-route handler threw — Elysia catches its own errors internally, so
-    // this only fires for Hono routes. Finish the timer (the `core` post-phase
-    // was skipped by the throw) and surface unexpected failures.
     const request = c.req.raw;
     detachTimer(request)?.finish();
+    // Client errors raised as HTTPException — notably the body validator's 400
+    // on malformed JSON — render at their real status and are NOT error-logged
+    // (mirrors the old Elysia onError skipping NOT_FOUND/VALIDATION/PARSE).
+    // Without this, every jsonBody route answers malformed JSON with a 500.
+    if (error instanceof HTTPException) {
+      return c.json({ error: error.message, code: error.status }, error.status);
+    }
     log.error("request error", {
       method: request.method,
       path: new URL(request.url).pathname,
@@ -284,7 +295,8 @@ export function createServer(config: Config) {
     return c.json({ error: "Internal Server Error", code: 500 }, 500);
   });
 
-  // Plugins migrated to native Hono. Matched before the Elysia mount.
+  // Every route below is native Hono (no Elysia mount remains). Matched in
+  // static-over-dynamic priority within this one router — see the records note.
   const migrated = new Hono();
   migrated.route("/api/v1", makeThemePlugin());
   migrated.route("/api/v1", makeMetricsPlugin(config.jwtSecret));
