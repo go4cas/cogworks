@@ -269,12 +269,9 @@ export function createServer(config: Config) {
       app
         .use(makeLogsPlugin(config.jwtSecret))
         .use(makeAuthPlugin(config.jwtSecret))
-        .use(makeQueuesPlugin(config.jwtSecret))
         .use(makeAuditLogPlugin(config.jwtSecret))
-        .use(makeApiTokensPlugin(config.jwtSecret))
         .use(makeSqlPlugin(config.jwtSecret, config.dbPath))
         .use(makeFlagsPlugin(config.jwtSecret))
-        .use(makeWebhooksPlugin(config.jwtSecret))
         .use(makeNotificationsPlugin(config.jwtSecret))
         .use(makeCollectionsPlugin(config.jwtSecret))
         .use(makeFilesPlugin(config.uploadDir, config.jwtSecret))
@@ -381,6 +378,9 @@ export function createServer(config: Config) {
   migrated.route("/api/v1", makeHooksPlugin(config.jwtSecret));
   migrated.route("/api/v1", makeRoutesPlugin(config.jwtSecret));
   migrated.route("/api/v1", makeBatchPlugin(config.jwtSecret));
+  migrated.route("/api/v1", makeWebhooksPlugin(config.jwtSecret));
+  migrated.route("/api/v1", makeApiTokensPlugin(config.jwtSecret));
+  migrated.route("/api/v1", makeQueuesPlugin(config.jwtSecret));
   app.route("/", migrated);
 
   // The realtime manager keys subscriptions by `ws.data.connId` on a `WSLike
