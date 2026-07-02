@@ -348,25 +348,31 @@ async function oidcProfile(token: string): Promise<NormalizedProfile> {
   return profile;
 }
 
+const APPLE_ISSUER = "https://appleid.apple.com";
+const APPLE_JWKS_URL = "https://appleid.apple.com/auth/keys";
+
+// jose fetches Apple's published signing keys on first use, caches them, and
+// refreshes on key rotation / cache miss — so verification costs a network
+// round-trip only when a new `kid` appears. No extra dependency (jose is
+// already used for all our JWT work).
+const appleJwks = jose.createRemoteJWKSet(new URL(APPLE_JWKS_URL));
+
 /**
- * Decode an `id_token` (JWT) payload without verifying its signature.
- * v1 trade-off: Apple's signing keys rotate via JWKS; we accept the IdP-issued
- * JWT at face value because it arrives over a TLS-protected back-channel
- * directly from Apple. TODO: switch to jwtVerify against the JWKS endpoint
- * (`https://appleid.apple.com/auth/keys`) when we can afford the dependency
- * footprint of remote key fetching + caching.
+ * Verify an Apple `id_token`: signature against Apple's JWKS, plus issuer,
+ * audience (our client_id), and expiry (jose enforces `exp`/`nbf`). Throws on
+ * any failure. `keySet` is injectable so tests can verify against a local key
+ * without hitting Apple.
  */
-function decodeIdTokenUnverified(idToken: string): Record<string, unknown> {
-  const parts = idToken.split(".");
-  if (parts.length < 2) throw new Error("Invalid id_token");
-  const payload = parts[1]!;
-  // base64url → base64 → JSON
-  const padded = payload
-    .replace(/-/g, "+")
-    .replace(/_/g, "/")
-    .padEnd(payload.length + ((4 - (payload.length % 4)) % 4), "=");
-  const json = atob(padded);
-  return JSON.parse(json) as Record<string, unknown>;
+export async function verifyAppleIdToken(
+  idToken: string,
+  clientId: string,
+  keySet: jose.JWTVerifyGetKey = appleJwks,
+): Promise<Record<string, unknown>> {
+  const { payload } = await jose.jwtVerify(idToken, keySet, {
+    issuer: APPLE_ISSUER,
+    audience: clientId,
+  });
+  return payload as Record<string, unknown>;
 }
 
 async function appleProfileFromTokenResponse(
@@ -376,7 +382,11 @@ async function appleProfileFromTokenResponse(
   if (typeof idToken !== "string" || !idToken) {
     throw new Error("Apple did not return an id_token");
   }
-  const claims = decodeIdTokenUnverified(idToken);
+  const clientId = getAppleConfig().client_id;
+  if (!clientId) {
+    throw new Error("Apple OAuth2 client_id is not configured");
+  }
+  const claims = await verifyAppleIdToken(idToken, clientId);
   const profile: NormalizedProfile = {
     id: String(claims.sub ?? ""),
     email: typeof claims.email === "string" ? (claims.email as string) : "",
