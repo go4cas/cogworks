@@ -6,7 +6,15 @@ Legend — **Confidence**: ✅ verified in code · ⚠️ review-flagged, needs 
 
 ---
 
-## P0 — Bugs & security (do before any features)
+## ✅ Progress
+
+**P0 — all cleared.** P0-1/2/3 admin+user token-revocation bypasses (#12); P0-4 cross-worker realtime bus (#16); P0-5 cluster singleton schedulers (#14); P0-6 per-worker rate-limit documented (#15); P0-7 image decompression-bomb cap (this PR); P0-8 ETag same-second lost-update guard (this PR). **T-1** centralized admin gate / removed ~16 duplicate helpers (#13). Plus the CI/`@sinclair/typebox` fix + Hono/fork README (#11).
+
+**Next up:** Category 3 features — **F-1 FTS5 full-text search** (biggest capability gap), then **F-2 + F-3** (OpenAPI + typed SDK generator, which also restores the dropped docs surface). Category 1 tech-debt (T-2 pipeline tests, T-4/T-5 docs) and Category 2 enhancements (E-*) as appetite allows.
+
+---
+
+## P0 — Bugs & security (do before any features) — ✅ DONE
 
 The enhancement review surfaced several items that are actually **correctness/security bugs**. These should be fixed first.
 
