@@ -12,9 +12,9 @@ import { makeBatchPlugin } from "../api/batch.ts";
 import { admin as adminTable } from "../db/schema.ts";
 
 const SECRET = "test-secret-batch-rules";
-// verifyAuthToken now requires `iss = "vaultbase"` and a matching DB
+// verifyAuthToken now requires `iss = "cogworks"` and a matching DB
 // row for the principal. Test fixtures must seed both.
-const ISSUER = "vaultbase";
+const ISSUER = "cogworks";
 
 let tmpDir: string;
 

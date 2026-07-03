@@ -12,7 +12,7 @@
  *     devices. Vaultbase never sees device tokens — the OneSignal client SDK
  *     calls `OneSignal.login(vaultbaseUserId)` to bind external_id once.
  *   - FCM: per-token sends. Vaultbase stores raw FCM registration tokens in
- *     `vb_device_tokens` and POSTs once per device. Auth is OAuth2 bearer
+ *     `cw_device_tokens` and POSTs once per device. Auth is OAuth2 bearer
  *     minted from a service-account.json (RS256 JWT exchange, ~55min cache).
  *
  * Both drivers detect token-level "delete this" errors (UNREGISTERED for FCM,
@@ -276,7 +276,7 @@ function stringifyData(data: Record<string, unknown> | undefined): Record<string
 }
 
 export interface FcmDeviceToken {
-  /** Caller-supplied row id (e.g. vb_device_tokens.id) — echoed back so the worker can disable rows. */
+  /** Caller-supplied row id (e.g. cw_device_tokens.id) — echoed back so the worker can disable rows. */
   id: string;
   token: string;
 }
@@ -426,12 +426,12 @@ async function notifyWorker(ctx: JobContext): Promise<void> {
       ctx.helpers.log("notify: fcm disabled mid-flight, dropping job");
       return;
     }
-    // Tokens come from vb_device_tokens. Lazy-import to avoid circular deps
+    // Tokens come from cw_device_tokens. Lazy-import to avoid circular deps
     // when the collection doesn't exist yet (notifications not bootstrapped).
     let tokens: FcmDeviceToken[] = [];
     try {
       tokens = ctx.helpers.db.query<{ id: string; token: string }>(
-        `SELECT id, token FROM vb_device_tokens
+        `SELECT id, token FROM cw_device_tokens
          WHERE user = ? AND provider = 'fcm' AND enabled = 1`,
         job.userId,
       );
@@ -443,7 +443,7 @@ async function notifyWorker(ctx: JobContext): Promise<void> {
     result = await sendFcm(cfg.fcm, tokens, job.payload);
     for (const id of result.invalidTokens) {
       try {
-        ctx.helpers.db.exec(`UPDATE vb_device_tokens SET enabled = 0 WHERE id = ?`, id);
+        ctx.helpers.db.exec(`UPDATE cw_device_tokens SET enabled = 0 WHERE id = ?`, id);
       } catch {
         /* table may be gone — ignore */
       }
@@ -480,7 +480,7 @@ export function registerNotificationsWorker(): void {
 export interface NotifyOpts {
   /** Restrict to a subset of enabled providers. Default: all enabled. */
   providers?: ProviderName[];
-  /** Insert a row into `vb_notifications` for the in-app inbox. Default true. */
+  /** Insert a row into `cw_notifications` for the in-app inbox. Default true. */
   inbox?: boolean;
   /** Enqueue push fan-out across enabled providers. Default true. */
   push?: boolean;
@@ -496,7 +496,7 @@ export interface DispatchResult {
  * also callable from custom routes / cron jobs / integration tests.
  *
  * Behaviour:
- *  1. Insert one row in `vb_notifications` (drives in-app inbox + realtime
+ *  1. Insert one row in `cw_notifications` (drives in-app inbox + realtime
  *     broadcast). Skipped when `opts.inbox === false` or the table doesn't
  *     exist (notifications not bootstrapped) — in the latter case dispatch
  *     still enqueues push so the operator can wire push without the inbox.
@@ -523,7 +523,7 @@ export async function dispatchNotification(
       const now = Math.floor(Date.now() / 1000);
       client
         .prepare(
-          `INSERT INTO vb_notifications (id, user, type, title, body, data, created_at)
+          `INSERT INTO cw_notifications (id, user, type, title, body, data, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
@@ -539,7 +539,7 @@ export async function dispatchNotification(
         );
       out.inboxRowId = id;
     } catch (e) {
-      // vb_notifications doesn't exist yet — caller hasn't enabled notifications
+      // cw_notifications doesn't exist yet — caller hasn't enabled notifications
       // bootstrap. Push still works without the inbox; just skip silently.
       const msg = e instanceof Error ? e.message : String(e);
       if (!msg.includes("no such table")) throw e;

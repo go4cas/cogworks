@@ -104,7 +104,7 @@ export function createDispatcher(reg: ToolRegistry, ctx: ToolContext): Dispatche
                 prompts: { listChanged: false },
               },
               serverInfo: {
-                name: "vaultbase",
+                name: "cogworks",
                 version: VAULTBASE_VERSION,
               },
               instructions: [

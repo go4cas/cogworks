@@ -19,7 +19,7 @@ describe("runMigrations", () => {
     await runMigrations();
 
     const client = rawClient();
-    const stamp = client.prepare(`SELECT version FROM vaultbase_schema WHERE id = 1`).get() as {
+    const stamp = client.prepare(`SELECT version FROM cogworks_schema WHERE id = 1`).get() as {
       version: string;
     } | null;
     expect(stamp?.version).toBe(VAULTBASE_VERSION);
@@ -27,23 +27,23 @@ describe("runMigrations", () => {
     // A representative core table exists and is usable.
     const table = client
       .prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?`)
-      .get("vaultbase_collections");
+      .get("cogworks_collections");
     expect(table).toBeTruthy();
   });
 
-  it("applies atomically — vaultbase_schema is only present after a full run", async () => {
+  it("applies atomically — cogworks_schema is only present after a full run", async () => {
     // Before migrating, the stamp table doesn't exist; after, it does. (The
     // whole apply runs in one transaction, so a failure would leave neither.)
     const client = rawClient();
     const before = client
-      .prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'vaultbase_schema'`)
+      .prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'cogworks_schema'`)
       .get();
     expect(before).toBeFalsy();
 
     await runMigrations();
 
     const after = client
-      .prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'vaultbase_schema'`)
+      .prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'cogworks_schema'`)
       .get();
     expect(after).toBeTruthy();
   });

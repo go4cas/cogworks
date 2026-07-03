@@ -116,7 +116,7 @@ export function isOriginAllowed(origin: string | null): boolean {
 }
 
 /**
- * Prune `vaultbase_file_token_uses` rows older than 24h once per hour. Runs
+ * Prune `cogworks_file_token_uses` rows older than 24h once per hour. Runs
  * once at boot (delayed) so a long-running process never accumulates more
  * than ~1 day of replay-guard state, which is itself capped by the file-token
  * window (default 1h) — so the table can't grow without bound.

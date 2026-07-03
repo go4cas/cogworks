@@ -368,7 +368,7 @@ export function makeAuthPlugin(jwtSecret: string) {
           });
           const isHttps = new URL(request.url).protocol === "https:";
           const secureFlag = isHttps ? " Secure;" : "";
-          const cookie = `vaultbase_admin_token=${token}; Path=/; HttpOnly;${secureFlag} SameSite=Lax; Max-Age=${ttl}`;
+          const cookie = `cogworks_admin_token=${token}; Path=/; HttpOnly;${secureFlag} SameSite=Lax; Max-Age=${ttl}`;
           return new Response(
             JSON.stringify({ data: { token, admin: { id: a.id, email: a.email } } }),
             {
@@ -456,10 +456,10 @@ export function makeAuthPlugin(jwtSecret: string) {
               return c.json({ error: pwErr, code: 422 }, 422);
             }
           }
-          // v0.11: per-collection email uniqueness via vb_<col> + legacy
+          // v0.11: per-collection email uniqueness via cw_<col> + legacy
           // fallback. Earlier versions enforced GLOBAL email uniqueness across
           // every auth collection — pre-existing rows still work via the
-          // helper's fallback to vaultbase_users.
+          // helper's fallback to cogworks_users.
           const existing = findUserByEmail(col, body.email);
           // No-enumeration: always return a generic success. If the email is
           // taken, queue a "complete account / reset password" email instead so
@@ -564,7 +564,7 @@ export function makeAuthPlugin(jwtSecret: string) {
           if (col.type !== "auth") {
             return c.json({ error: `'${col.name}' is not an auth collection`, code: 422 }, 422);
           }
-          // Per-collection email lookup (vb_<col> first, legacy fallback).
+          // Per-collection email lookup (cw_<col> first, legacy fallback).
           const u = findUserByEmail(col, body.email);
           // Always verify (against dummy hash on miss) so timing is constant.
           const hashToCheck = u?.password_hash ?? dummyPasswordHash();
@@ -990,11 +990,11 @@ export function makeAuthPlugin(jwtSecret: string) {
         const headers = new Headers({ "content-type": "application/json" });
         headers.append(
           "set-cookie",
-          `vaultbase_admin_token=; Path=/; HttpOnly;${secureFlag} SameSite=Lax; Max-Age=0`,
+          `cogworks_admin_token=; Path=/; HttpOnly;${secureFlag} SameSite=Lax; Max-Age=0`,
         );
         headers.append(
           "set-cookie",
-          `vaultbase_user_token=; Path=/; HttpOnly;${secureFlag} SameSite=Lax; Max-Age=0`,
+          `cogworks_user_token=; Path=/; HttpOnly;${secureFlag} SameSite=Lax; Max-Age=0`,
         );
         return new Response(JSON.stringify({ data: { ok: true } }), { status: 200, headers });
       })

@@ -1,10 +1,10 @@
 /**
  * Auth-collection user storage helpers — v0.11 transition.
  *
- * v0.10 model: every auth user lived in shared `vaultbase_users` keyed by
+ * v0.10 model: every auth user lived in shared `cogworks_users` keyed by
  * collection_id, with custom fields packed into a `data` JSON blob.
  *
- * v0.11 model: each auth collection gets a per-collection `vb_<name>`
+ * v0.11 model: each auth collection gets a per-collection `cw_<name>`
  * table with auth columns inline + typed custom-field columns. Custom
  * fields are real columns, not JSON-extracted.
  *
@@ -22,7 +22,7 @@ import { getRawClient } from "../db/client.ts";
 import { userTableName } from "./collections.ts";
 import type { Collection } from "../db/schema.ts";
 
-/** Auth-system columns guaranteed to exist on every `vb_<auth-col>`. */
+/** Auth-system columns guaranteed to exist on every `cw_<auth-col>`. */
 export const AUTH_USER_COLUMNS = [
   "id",
   "email",
@@ -50,7 +50,7 @@ export interface AuthUserRow {
   totp_enabled: number;
   is_anonymous: number;
   password_reset_at: number;
-  /** Serialised JSON blob — present only on legacy reads from vaultbase_users. */
+  /** Serialised JSON blob — present only on legacy reads from cogworks_users. */
   data?: string;
   created_at: number;
   updated_at: number;
@@ -66,8 +66,8 @@ function quoteIdent(s: string): string {
 }
 
 /**
- * Find a user by id, scoped to a collection. Reads `vb_<name>` only —
- * `vaultbase_users` was dropped in v0.11 phase 4.
+ * Find a user by id, scoped to a collection. Reads `cw_<name>` only —
+ * `cogworks_users` was dropped in v0.11 phase 4.
  */
 export function findUserById(col: Collection, id: string): AuthUserRow | null {
   const tname = quoteIdent(userTableName(col.name));
@@ -122,14 +122,14 @@ interface InsertInput {
   password_reset_at?: number;
   /** Custom-field values keyed by field name (typed per the collection schema). */
   custom?: Record<string, unknown>;
-  /** Pre-serialised legacy JSON blob — used for the dual-write to vaultbase_users. */
+  /** Pre-serialised legacy JSON blob — used for the dual-write to cogworks_users. */
   legacyDataJson?: string;
   created_at: number;
   updated_at: number;
 }
 
 /**
- * Insert into `vb_<name>` only. Custom fields land as real columns
+ * Insert into `cw_<name>` only. Custom fields land as real columns
  * whitelisted against the per-collection table schema.
  */
 export async function insertUser(col: Collection, input: InsertInput): Promise<void> {
@@ -176,7 +176,7 @@ export async function insertUser(col: Collection, input: InsertInput): Promise<v
 }
 
 /**
- * Update by id on `vb_<name>`. Whitelists keys against the per-collection
+ * Update by id on `cw_<name>`. Whitelists keys against the per-collection
  * table schema; unknown keys are silently ignored.
  */
 export async function updateUserById(
@@ -202,7 +202,7 @@ export async function updateUserById(
   }
 }
 
-/** Delete a user from `vb_<name>` by id. */
+/** Delete a user from `cw_<name>` by id. */
 export function deleteUserById(col: Collection, id: string): void {
   const tname = quoteIdent(userTableName(col.name));
   try {

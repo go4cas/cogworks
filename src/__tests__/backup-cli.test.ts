@@ -111,7 +111,7 @@ describe("end-to-end: local snapshot", () => {
     const { Database } = await import("bun:sqlite");
     const snap = new Database(dest, { readonly: true });
     try {
-      const row = snap.query("SELECT email FROM vaultbase_admin WHERE id = 'a1'").get() as {
+      const row = snap.query("SELECT email FROM cogworks_admin WHERE id = 'a1'").get() as {
         email: string;
       } | null;
       expect(row?.email).toBe("snap@test.local");

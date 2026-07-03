@@ -113,7 +113,7 @@ function maybeDecrypt(key: string, value: string): string {
 
 /** Read a single setting; returns the default when missing. */
 export function getSetting(key: string, defaultVal: string): string {
-  const row = rawClient().prepare(`SELECT value FROM vaultbase_settings WHERE key = ?`).get(key) as
+  const row = rawClient().prepare(`SELECT value FROM cogworks_settings WHERE key = ?`).get(key) as
     | { value: string }
     | undefined
     | null;
@@ -126,14 +126,14 @@ export function setSetting(key: string, value: string): void {
   const stored = maybeEncrypt(key, value);
   rawClient()
     .prepare(
-      `INSERT INTO vaultbase_settings (key, value, updated_at) VALUES (?, ?, unixepoch())
+      `INSERT INTO cogworks_settings (key, value, updated_at) VALUES (?, ?, unixepoch())
        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = unixepoch()`,
     )
     .run(key, stored);
 }
 
 export function getAllSettings(): Record<string, string> {
-  const rows = rawClient().prepare(`SELECT key, value FROM vaultbase_settings`).all() as Array<{
+  const rows = rawClient().prepare(`SELECT key, value FROM cogworks_settings`).all() as Array<{
     key: string;
     value: string;
   }>;

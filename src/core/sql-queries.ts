@@ -1,6 +1,6 @@
 /**
  * Saved-SQL-queries store. Per-admin, private. Persists into the
- * `vaultbase_sql_queries` system table.
+ * `cogworks_sql_queries` system table.
  */
 
 import { and, desc, eq } from "drizzle-orm";

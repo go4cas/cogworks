@@ -40,7 +40,7 @@ async function setupUserWithTotp(): Promise<{
   });
   const token = await new jose.SignJWT({ id, email, collection: "users" })
     .setProtectedHeader({ alg: "HS256" })
-    .setIssuer("vaultbase")
+    .setIssuer("cogworks")
     .setAudience("user")
     .setIssuedAt(Math.floor(Date.now() / 1000))
     .setExpirationTime("1h")

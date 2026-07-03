@@ -19,7 +19,7 @@ export type SqlFunctionCategory =
   | "string"
   | "window"
   | "fts5"
-  | "vaultbase";
+  | "cogworks";
 
 export interface SqlFunction {
   name: string;

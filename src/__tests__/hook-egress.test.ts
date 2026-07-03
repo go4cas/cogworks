@@ -142,11 +142,11 @@ describe("operator overrides via settings", () => {
     // The settings table is created lazily by the settings plugin; touch it
     // via raw SQL so this test doesn't depend on importing the plugin.
     await getDb().run(
-      sql`CREATE TABLE IF NOT EXISTS vaultbase_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '', updated_at INTEGER NOT NULL DEFAULT (unixepoch()))`,
+      sql`CREATE TABLE IF NOT EXISTS cogworks_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '', updated_at INTEGER NOT NULL DEFAULT (unixepoch()))`,
     );
     await getDb().run(
       sql.raw(
-        `INSERT INTO vaultbase_settings (key, value) VALUES ('${key}', '${value.replace(/'/g, "''")}') ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+        `INSERT INTO cogworks_settings (key, value) VALUES ('${key}', '${value.replace(/'/g, "''")}') ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
       ),
     );
     invalidateEgressCache();

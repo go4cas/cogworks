@@ -79,13 +79,13 @@ export function makeMetricsPlugin(jwtSecret: string) {
             lines.push(`${name}${labels} ${val}`);
           }
         };
-        push("vaultbase_uptime_seconds", "Process uptime in seconds.", "gauge", [
+        push("cogworks_uptime_seconds", "Process uptime in seconds.", "gauge", [
           ["", snap.uptime_seconds],
         ]);
-        push("vaultbase_requests_total", "Total finished requests since boot.", "counter", [
+        push("cogworks_requests_total", "Total finished requests since boot.", "counter", [
           ["", snap.requests_total],
         ]);
-        push("vaultbase_rps_1min", "Requests per second over the last 60 s.", "gauge", [
+        push("cogworks_rps_1min", "Requests per second over the last 60 s.", "gauge", [
           ["", snap.rps_1min],
         ]);
         // Per-step summary — emit p50/p90/p99/p99.9 quantiles + count.
@@ -103,25 +103,25 @@ export function makeMetricsPlugin(jwtSecret: string) {
           stepSum.push([`{step="${step}"}`, Math.round(h.mean_us * h.count)]);
         }
         push(
-          "vaultbase_step_duration_microseconds",
+          "cogworks_step_duration_microseconds",
           "Per-step request latency (microseconds).",
           "summary",
           stepSamples,
         );
-        lines.push(`# TYPE vaultbase_step_duration_microseconds_count counter`);
+        lines.push(`# TYPE cogworks_step_duration_microseconds_count counter`);
         for (const [labels, val] of stepCount)
-          lines.push(`vaultbase_step_duration_microseconds_count${labels} ${val}`);
-        lines.push(`# TYPE vaultbase_step_duration_microseconds_sum counter`);
+          lines.push(`cogworks_step_duration_microseconds_count${labels} ${val}`);
+        lines.push(`# TYPE cogworks_step_duration_microseconds_sum counter`);
         for (const [labels, val] of stepSum)
-          lines.push(`vaultbase_step_duration_microseconds_sum${labels} ${val}`);
+          lines.push(`cogworks_step_duration_microseconds_sum${labels} ${val}`);
         if (sql) {
-          push("vaultbase_sqlite_page_count", "SQLite database page count.", "gauge", [
+          push("cogworks_sqlite_page_count", "SQLite database page count.", "gauge", [
             ["", sql.page_count],
           ]);
-          push("vaultbase_sqlite_page_size", "SQLite database page size (B).", "gauge", [
+          push("cogworks_sqlite_page_size", "SQLite database page size (B).", "gauge", [
             ["", sql.page_size],
           ]);
-          push("vaultbase_sqlite_wal_pages", "SQLite WAL log pages.", "gauge", [
+          push("cogworks_sqlite_wal_pages", "SQLite WAL log pages.", "gauge", [
             ["", sql.wal_pages],
           ]);
         }

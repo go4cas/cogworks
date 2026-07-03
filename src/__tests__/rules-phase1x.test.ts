@@ -21,7 +21,7 @@ describe("Phase 1.x — :each modifier", () => {
   });
 
   it("compiles to a NOT EXISTS subquery", () => {
-    const r = parseFilter(`tags:each = "ok"`, "vb_posts", USER);
+    const r = parseFilter(`tags:each = "ok"`, "cw_posts", USER);
     expect(r?.sql).toContain("NOT EXISTS");
     expect(r?.sql).toContain("json_each");
   });
@@ -33,11 +33,11 @@ describe("Phase 1.x — _via_ back-relations", () => {
     // SQL compilation should produce a recognizable subquery.
     const lookup: CollectionLookup = (n) =>
       n === "comments" ? { viewRule: null, hasField: (f) => f === "post" } : null;
-    const r = parseFilter(`comments_via_post:length > 0`, "vb_posts", { auth: USER, lookup });
+    const r = parseFilter(`comments_via_post:length > 0`, "cw_posts", { auth: USER, lookup });
     expect(r).not.toBeNull();
-    expect(r?.sql).toContain("vb_comments");
+    expect(r?.sql).toContain("cw_comments");
     expect(r?.sql).toContain("json_group_array");
-    expect(r?.sql).toContain('"vb_comments"."post" = "vb_posts"."id"');
+    expect(r?.sql).toContain('"cw_comments"."post" = "cw_posts"."id"');
   });
 
   it("inherits the joined collection's view_rule (non-admin)", () => {
@@ -45,23 +45,23 @@ describe("Phase 1.x — _via_ back-relations", () => {
       n === "comments"
         ? { viewRule: 'visibility = "public"', hasField: (f) => f === "post" || f === "visibility" }
         : null;
-    const r = parseFilter(`comments_via_post:length > 0`, "vb_posts", { auth: USER, lookup });
+    const r = parseFilter(`comments_via_post:length > 0`, "cw_posts", { auth: USER, lookup });
     // The compiled SQL must reference the inherited rule.
-    expect(r?.sql).toContain('"vb_comments"."visibility" = ?');
+    expect(r?.sql).toContain('"cw_comments"."visibility" = ?');
     expect(r?.params).toContain("public");
   });
 
   it("inherits admin-only view_rule → forces 1=0 for non-admin", () => {
     const lookup: CollectionLookup = (n) =>
       n === "comments" ? { viewRule: "", hasField: (f) => f === "post" } : null;
-    const r = parseFilter(`comments_via_post:length > 0`, "vb_posts", { auth: USER, lookup });
+    const r = parseFilter(`comments_via_post:length > 0`, "cw_posts", { auth: USER, lookup });
     expect(r?.sql).toContain("1=0");
   });
 
   it("admin auth bypasses joined view_rule", () => {
     const lookup: CollectionLookup = (n) =>
       n === "comments" ? { viewRule: "", hasField: (f) => f === "post" } : null;
-    const r = parseFilter(`comments_via_post:length > 0`, "vb_posts", { auth: ADMIN, lookup });
+    const r = parseFilter(`comments_via_post:length > 0`, "cw_posts", { auth: ADMIN, lookup });
     expect(r?.sql).not.toContain("1=0");
   });
 
@@ -69,33 +69,33 @@ describe("Phase 1.x — _via_ back-relations", () => {
     const lookup: CollectionLookup = (n) =>
       n === "comments" ? { viewRule: null, hasField: () => false } : null;
     expect(() =>
-      parseFilter(`comments_via_post = "x"`, "vb_posts", { auth: USER, lookup }),
+      parseFilter(`comments_via_post = "x"`, "cw_posts", { auth: USER, lookup }),
     ).toThrow();
   });
 
   it("rejects identifiers with shell metacharacters", () => {
     // The expression parser refuses `;` inside identifiers, so it doesn't
     // even reach the SQL compiler.
-    expect(parseFilter(`comments;DROP_via_post = 1`, "vb_posts", USER)).toBeNull();
+    expect(parseFilter(`comments;DROP_via_post = 1`, "cw_posts", USER)).toBeNull();
   });
 });
 
 describe("Phase 1.x — @collection.* view_rule inheritance", () => {
   it("non-admin without lookup → conservative deny via 1=0", () => {
-    const r = parseFilter(`@collection.posts.title = "x"`, "vb_users", USER);
+    const r = parseFilter(`@collection.posts.title = "x"`, "cw_users", USER);
     expect(r?.sql).toContain("1=0");
   });
 
   it("admin without lookup → no 1=0 guard", () => {
-    const r = parseFilter(`@collection.posts.title = "x"`, "vb_users", ADMIN);
+    const r = parseFilter(`@collection.posts.title = "x"`, "cw_users", ADMIN);
     expect(r?.sql).not.toContain("1=0");
   });
 
   it("non-admin WITH lookup that exposes a view_rule → inherits", () => {
     const lookup: CollectionLookup = (n) =>
       n === "posts" ? { viewRule: "published = true", hasField: () => true } : null;
-    const r = parseFilter(`@collection.posts.title = "x"`, "vb_users", { auth: USER, lookup });
-    expect(r?.sql).toContain('"vb_posts"."published" = ?');
+    const r = parseFilter(`@collection.posts.title = "x"`, "cw_users", { auth: USER, lookup });
+    expect(r?.sql).toContain('"cw_posts"."published" = ?');
   });
 
   it("max join depth enforced", () => {
@@ -106,7 +106,7 @@ describe("Phase 1.x — @collection.* view_rule inheritance", () => {
     // A view_rule that recursively references @collection.posts will exceed
     // MAX_JOIN_DEPTH and fall through to the parser's null-on-throw.
     expect(() =>
-      parseFilter(`@collection.posts.title = "y"`, "vb_users", { auth: USER, lookup }),
+      parseFilter(`@collection.posts.title = "y"`, "cw_users", { auth: USER, lookup }),
     ).toThrow();
   });
 });

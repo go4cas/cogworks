@@ -78,13 +78,13 @@ describe("GET /admin/collections/stats", () => {
     const now = Math.floor(Date.now() / 1000);
     const c = getRawClient();
     c.prepare(
-      `INSERT INTO vb_posts (id, title, created_at, updated_at) VALUES ('p1', 'a', ?, ?)`,
+      `INSERT INTO cw_posts (id, title, created_at, updated_at) VALUES ('p1', 'a', ?, ?)`,
     ).run(now - 7200, now - 7200);
     c.prepare(
-      `INSERT INTO vb_posts (id, title, created_at, updated_at) VALUES ('p2', 'b', ?, ?)`,
+      `INSERT INTO cw_posts (id, title, created_at, updated_at) VALUES ('p2', 'b', ?, ?)`,
     ).run(now - 1800, now - 1800);
     c.prepare(
-      `INSERT INTO vb_posts (id, title, created_at, updated_at) VALUES ('p3', 'c', ?, ?)`,
+      `INSERT INTO cw_posts (id, title, created_at, updated_at) VALUES ('p3', 'c', ?, ?)`,
     ).run(now, now);
 
     const app = mkApp();
@@ -123,7 +123,7 @@ describe("GET /admin/collections/stats", () => {
     await createCollection({
       name: "live_posts",
       type: "view",
-      view_query: "SELECT id, title FROM vb_posts",
+      view_query: "SELECT id, title FROM cw_posts",
       fields: JSON.stringify([]),
     });
     const app = mkApp();
@@ -151,12 +151,12 @@ describe("GET /admin/collections/stats", () => {
     const now = Math.floor(Date.now() / 1000);
     getRawClient()
       .prepare(
-        `INSERT INTO vb_members (id, email, password_hash, created_at, updated_at) VALUES ('m1', 'a@x.com', 'h', ?, ?)`,
+        `INSERT INTO cw_members (id, email, password_hash, created_at, updated_at) VALUES ('m1', 'a@x.com', 'h', ?, ?)`,
       )
       .run(now, now);
     getRawClient()
       .prepare(
-        `INSERT INTO vb_members (id, email, password_hash, created_at, updated_at) VALUES ('m2', 'b@x.com', 'h', ?, ?)`,
+        `INSERT INTO cw_members (id, email, password_hash, created_at, updated_at) VALUES ('m2', 'b@x.com', 'h', ?, ?)`,
       )
       .run(now - 7200, now - 7200);
 
@@ -186,10 +186,10 @@ describe("GET /admin/collections/stats", () => {
     const week_ago = now - 7 * 86400;
     const c = getRawClient();
     c.prepare(
-      `INSERT INTO vb_logs (id, msg, created_at, updated_at) VALUES ('l1', 'old', ?, ?)`,
+      `INSERT INTO cw_logs (id, msg, created_at, updated_at) VALUES ('l1', 'old', ?, ?)`,
     ).run(week_ago, week_ago);
     c.prepare(
-      `INSERT INTO vb_logs (id, msg, created_at, updated_at) VALUES ('l2', 'new', ?, ?)`,
+      `INSERT INTO cw_logs (id, msg, created_at, updated_at) VALUES ('l2', 'new', ?, ?)`,
     ).run(now, now);
 
     const app = mkApp();

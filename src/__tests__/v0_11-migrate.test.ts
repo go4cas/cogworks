@@ -2,13 +2,13 @@
  * v0.11 phase 1 — migration prep for auth-as-first-class-collection.
  *
  * Verifies that runMigrations() promotes a v0.10-shape DB:
- *   - vaultbase_users with rows
- *   - vb_<auth-col> exists but lacks auth columns
+ *   - cogworks_users with rows
+ *   - cw_<auth-col> exists but lacks auth columns
  * into the new shape:
- *   - vb_<auth-col> has auth columns + custom-field columns
- *   - rows from vaultbase_users copied in (with `data` JSON fanned out)
+ *   - cw_<auth-col> has auth columns + custom-field columns
+ *   - rows from cogworks_users copied in (with `data` JSON fanned out)
  *   - UNIQUE index on email
- *   - vaultbase_users still present (phase 1 is data-prep; readers haven't
+ *   - cogworks_users still present (phase 1 is data-prep; readers haven't
  *     switched over yet — that lands in phase 2).
  */
 import { describe, expect, it, beforeEach, afterEach } from "bun:test";
@@ -42,15 +42,15 @@ afterEach(() => {
   }
 });
 
-describe("v0.11 phase 1 — auth columns added to vb_<col>", () => {
-  it("createCollection(type='auth') puts auth columns on vb_<name>", async () => {
+describe("v0.11 phase 1 — auth columns added to cw_<col>", () => {
+  it("createCollection(type='auth') puts auth columns on cw_<name>", async () => {
     await createCollection({
       name: "users",
       type: "auth",
       fields: JSON.stringify([{ name: "display_name", type: "text" }]),
       view_rule: null,
     });
-    const cols = getRawClient().prepare(`PRAGMA table_info("vb_users")`).all() as Array<{
+    const cols = getRawClient().prepare(`PRAGMA table_info("cw_users")`).all() as Array<{
       name: string;
     }>;
     const names = cols.map((c) => c.name);
@@ -73,7 +73,7 @@ describe("v0.11 phase 1 — auth columns added to vb_<col>", () => {
       fields: JSON.stringify([{ name: "title", type: "text" }]),
       view_rule: null,
     });
-    const cols = getRawClient().prepare(`PRAGMA table_info("vb_posts")`).all() as Array<{
+    const cols = getRawClient().prepare(`PRAGMA table_info("cw_posts")`).all() as Array<{
       name: string;
     }>;
     const names = cols.map((c) => c.name);
@@ -83,12 +83,12 @@ describe("v0.11 phase 1 — auth columns added to vb_<col>", () => {
   });
 });
 
-describe("v0.11 migration — vaultbase_users → vb_<col> + drop legacy", () => {
-  it("on a fresh install drops the empty vaultbase_users at end of migration", async () => {
+describe("v0.11 migration — cogworks_users → cw_<col> + drop legacy", () => {
+  it("on a fresh install drops the empty cogworks_users at end of migration", async () => {
     // runMigrations already ran in beforeEach. With no v0.10 rows present,
     // FinalizeAuthMigration drops the legacy table.
     const exists = getRawClient()
-      .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='vaultbase_users'`)
+      .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='cogworks_users'`)
       .get();
     expect(exists).toBeFalsy();
   });
@@ -99,7 +99,7 @@ describe("v0.11 migration — vaultbase_users → vb_<col> + drop legacy", () =>
     // seed + run migrations again.
     const c = getRawClient();
     c.exec(`
-      CREATE TABLE vaultbase_users (
+      CREATE TABLE cogworks_users (
         id TEXT PRIMARY KEY, collection_id TEXT NOT NULL, email TEXT NOT NULL,
         password_hash TEXT NOT NULL, email_verified INTEGER NOT NULL DEFAULT 0,
         totp_secret TEXT, totp_enabled INTEGER NOT NULL DEFAULT 0,
@@ -118,7 +118,7 @@ describe("v0.11 migration — vaultbase_users → vb_<col> + drop legacy", () =>
     });
     const now = Math.floor(Date.now() / 1000);
     c.prepare(
-      `INSERT INTO vaultbase_users (id, collection_id, email, password_hash, email_verified,
+      `INSERT INTO cogworks_users (id, collection_id, email, password_hash, email_verified,
         totp_enabled, is_anonymous, data, created_at, updated_at)
        VALUES (?, ?, ?, ?, 1, 0, 0, ?, ?, ?)`,
     ).run(
@@ -133,7 +133,7 @@ describe("v0.11 migration — vaultbase_users → vb_<col> + drop legacy", () =>
 
     await runMigrations(); // copies + drops
 
-    const rows = c.prepare(`SELECT * FROM vb_members`).all() as Array<{
+    const rows = c.prepare(`SELECT * FROM cw_members`).all() as Array<{
       id: string;
       email: string;
       password_hash: string;
@@ -146,14 +146,14 @@ describe("v0.11 migration — vaultbase_users → vb_<col> + drop legacy", () =>
     expect(rows[0]!.display_name).toBe("Alice");
 
     const legacy = c
-      .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='vaultbase_users'`)
+      .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='cogworks_users'`)
       .get();
     expect(legacy).toBeFalsy();
   });
 });
 
 describe("v0.11 phase 3 — records.ts handles auth collections", () => {
-  it("listRecords on auth collection returns rows from vb_<col>, password_hash stripped", async () => {
+  it("listRecords on auth collection returns rows from cw_<col>, password_hash stripped", async () => {
     const { listRecords } = await import("../core/records.ts");
     await createCollection({
       name: "members",
@@ -164,7 +164,7 @@ describe("v0.11 phase 3 — records.ts handles auth collections", () => {
     const now = Math.floor(Date.now() / 1000);
     getRawClient()
       .prepare(
-        `INSERT INTO vb_members (id, email, password_hash, email_verified, name, created_at, updated_at)
+        `INSERT INTO cw_members (id, email, password_hash, email_verified, name, created_at, updated_at)
        VALUES ('u1', 'alice@x.com', 'h$secret', 1, 'Alice', ?, ?)`,
       )
       .run(now, now);
@@ -202,7 +202,7 @@ describe("v0.11 phase 3 — records.ts handles auth collections", () => {
     const now = Math.floor(Date.now() / 1000);
     getRawClient()
       .prepare(
-        `INSERT INTO vb_members (id, email, password_hash, email_verified, name, created_at, updated_at)
+        `INSERT INTO cw_members (id, email, password_hash, email_verified, name, created_at, updated_at)
        VALUES ('u1', 'a@x.com', 'h$ORIG', 1, 'A', ?, ?)`,
       )
       .run(now, now);
@@ -214,7 +214,7 @@ describe("v0.11 phase 3 — records.ts handles auth collections", () => {
       email_verified: 0,
     });
     const after = getRawClient()
-      .prepare(`SELECT name, password_hash, email_verified FROM vb_members WHERE id = 'u1'`)
+      .prepare(`SELECT name, password_hash, email_verified FROM cw_members WHERE id = 'u1'`)
       .get() as {
       name: string;
       password_hash: string;
@@ -226,8 +226,8 @@ describe("v0.11 phase 3 — records.ts handles auth collections", () => {
   });
 });
 
-describe("v0.11 — /register writes to vb_<col>", () => {
-  it("/register on auth collection populates vb_<col> with auth + custom columns", async () => {
+describe("v0.11 — /register writes to cw_<col>", () => {
+  it("/register on auth collection populates cw_<col> with auth + custom columns", async () => {
     const { makeAuthPlugin } = await import("../api/auth.ts");
     await createCollection({
       name: "members",
@@ -252,7 +252,7 @@ describe("v0.11 — /register writes to vb_<col>", () => {
 
     const newRow = getRawClient()
       .prepare(
-        `SELECT id, email, password_hash, email_verified, name FROM vb_members WHERE email = ?`,
+        `SELECT id, email, password_hash, email_verified, name FROM cw_members WHERE email = ?`,
       )
       .get("alice@x.com") as
       | { id: string; email: string; password_hash: string; name: string }
@@ -281,10 +281,10 @@ describe("vaultbase doctor — pre-migration checks", () => {
     });
     const now = Math.floor(Date.now() / 1000);
     const c = getRawClient();
-    // Doctor inspects the legacy vaultbase_users table — re-create it for
+    // Doctor inspects the legacy cogworks_users table — re-create it for
     // this scenario (fresh installs auto-drop it after migration).
     c.exec(`
-      CREATE TABLE vaultbase_users (
+      CREATE TABLE cogworks_users (
         id TEXT PRIMARY KEY, collection_id TEXT NOT NULL, email TEXT NOT NULL,
         password_hash TEXT NOT NULL, email_verified INTEGER NOT NULL DEFAULT 0,
         totp_secret TEXT, totp_enabled INTEGER NOT NULL DEFAULT 0,
@@ -293,11 +293,11 @@ describe("vaultbase doctor — pre-migration checks", () => {
       )
     `);
     c.prepare(
-      `INSERT INTO vaultbase_users (id, collection_id, email, password_hash, data, created_at, updated_at)
+      `INSERT INTO cogworks_users (id, collection_id, email, password_hash, data, created_at, updated_at)
        VALUES ('u1', ?, 'dup@x.com', 'h', '{}', ?, ?)`,
     ).run(col.id, now, now);
     c.prepare(
-      `INSERT INTO vaultbase_users (id, collection_id, email, password_hash, data, created_at, updated_at)
+      `INSERT INTO cogworks_users (id, collection_id, email, password_hash, data, created_at, updated_at)
        VALUES ('u2', ?, 'dup@x.com', 'h', '{}', ?, ?)`,
     ).run(col.id, now, now);
 
@@ -316,7 +316,7 @@ describe("vaultbase doctor — pre-migration checks", () => {
     const now = Math.floor(Date.now() / 1000);
     getRawClient()
       .prepare(
-        `INSERT INTO vaultbase_collections (id, name, type, fields, created_at, updated_at)
+        `INSERT INTO cogworks_collections (id, name, type, fields, created_at, updated_at)
        VALUES ('c1', 'members', 'auth', ?, ?, ?)`,
       )
       .run(JSON.stringify([{ name: "password_hash", type: "text" }]), now, now);
@@ -340,7 +340,7 @@ describe("vaultbase doctor — pre-migration checks", () => {
     const now = Math.floor(Date.now() / 1000);
     const c = getRawClient();
     c.exec(`
-      CREATE TABLE vaultbase_users (
+      CREATE TABLE cogworks_users (
         id TEXT PRIMARY KEY, collection_id TEXT NOT NULL, email TEXT NOT NULL,
         password_hash TEXT NOT NULL, email_verified INTEGER NOT NULL DEFAULT 0,
         totp_secret TEXT, totp_enabled INTEGER NOT NULL DEFAULT 0,
@@ -349,7 +349,7 @@ describe("vaultbase doctor — pre-migration checks", () => {
       )
     `);
     c.prepare(
-      `INSERT INTO vaultbase_users (id, collection_id, email, password_hash, data, created_at, updated_at)
+      `INSERT INTO cogworks_users (id, collection_id, email, password_hash, data, created_at, updated_at)
        VALUES ('u1', ?, 'x@x.com', 'h', ?, ?, ?)`,
     ).run(col.id, JSON.stringify({ display_name: "X", legacy_blob: "ignored" }), now, now);
 

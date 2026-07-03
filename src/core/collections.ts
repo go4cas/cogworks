@@ -71,7 +71,7 @@ export interface FieldOptions {
   bindTokenIp?: boolean;
   /**
    * File-only. When true, every successful download emits a `files.download`
-   * row to `vaultbase_audit_log` (filename + collection + record + actor).
+   * row to `cogworks_audit_log` (filename + collection + record + actor).
    */
   auditDownloads?: boolean;
   /**
@@ -88,7 +88,7 @@ export type CollectionType = "base" | "auth";
 
 /**
  * User-defined fields on `auth` collections cannot use these names — they are
- * reserved for the implicit auth schema (stored in `vaultbase_users` and
+ * reserved for the implicit auth schema (stored in `cogworks_users` and
  * surfaced via the auth endpoints). Implicit-flagged entries with these names
  * are allowed since they represent the schema's own customization slot.
  */
@@ -103,7 +103,7 @@ export const AUTH_RESERVED_FIELD_NAMES = [
 
 /**
  * Implicit fields on auth collections — surfaced in the schema editor so admins
- * can customize their validation, but stored on `vaultbase_users` rather than
+ * can customize their validation, but stored on `cogworks_users` rather than
  * the per-collection table. Order matches admin display order.
  */
 export const AUTH_IMPLICIT_FIELDS: FieldDef[] = [
@@ -119,7 +119,7 @@ export interface FieldDef {
   type: FieldType;
   required?: boolean;
   system?: boolean;
-  /** Auth-collection-only: managed by the implicit auth schema (email, verified). Storage lives in vaultbase_users; this entry exists so options can be customized. */
+  /** Auth-collection-only: managed by the implicit auth schema (email, verified). Storage lives in cogworks_users; this entry exists so options can be customized. */
   implicit?: boolean;
   collection?: string;
   options?: FieldOptions;
@@ -182,9 +182,9 @@ export function parseFields(raw: string): FieldDef[] {
 }
 
 // ── Table naming ────────────────────────────────────────────────────────────
-/** User collections live in tables named `vb_<name>` to avoid colliding with internal `vaultbase_*` tables. */
+/** User collections live in tables named `cw_<name>` to avoid colliding with internal `cogworks_*` tables. */
 export function userTableName(collectionName: string): string {
-  return `vb_${collectionName}`;
+  return `cw_${collectionName}`;
 }
 
 /** Map a field type to its SQLite storage type. */
@@ -250,13 +250,13 @@ export function dropUserTable(collectionName: string): void {
 }
 
 /**
- * Auth-only columns added to every auth collection's `vb_<name>` table —
+ * Auth-only columns added to every auth collection's `cw_<name>` table —
  * uniform across collections, managed by the auth flow. Defined once here so
  * the schema migration + collection-creation paths emit identical DDL.
  *
  * v0.11 promotes auth users to per-collection real tables (was a shared
- * `vaultbase_users` keyed by collection_id). These columns are the auth
- * surface that flows into every `vb_<auth-col>`.
+ * `cogworks_users` keyed by collection_id). These columns are the auth
+ * surface that flows into every `cw_<auth-col>`.
  */
 export const AUTH_SYSTEM_COLUMNS: ReadonlyArray<{ name: string; sql: string }> = [
   { name: "email", sql: "TEXT" },
@@ -269,7 +269,7 @@ export const AUTH_SYSTEM_COLUMNS: ReadonlyArray<{ name: string; sql: string }> =
 ];
 
 /**
- * Idempotent: ensure every auth column exists on `vb_<name>`. ALTER TABLE
+ * Idempotent: ensure every auth column exists on `cw_<name>`. ALTER TABLE
  * ADD COLUMN throws if the column already exists; we swallow that.
  *
  * Called from createCollection (for fresh auth collections) and from the
@@ -611,13 +611,13 @@ export async function createCollection(
   if (type === "view") {
     createUserView(row.name, data.view_query!);
   } else {
-    // Per-collection real table excludes implicit fields — those live on vaultbase_users.
+    // Per-collection real table excludes implicit fields — those live on cogworks_users.
     createUserTable(
       row.name,
       fields.filter((f) => !f.implicit),
     );
     if (type === "auth") {
-      // v0.11+: auth columns (email/password_hash/...) live on `vb_<name>`
+      // v0.11+: auth columns (email/password_hash/...) live on `cw_<name>`
       // alongside the per-collection custom fields. Existing v0.10 installs
       // get the same shape via the boot migration in db/migrate.ts.
       ensureAuthColumns(row.name);

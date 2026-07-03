@@ -79,7 +79,7 @@ describe("setSetting / getSetting with encryption key set", () => {
     // Raw row in SQLite must NOT be the plaintext.
     const { getDb } = require("../db/client.ts");
     const raw = (getDb() as any).$client
-      .prepare(`SELECT value FROM vaultbase_settings WHERE key = ?`)
+      .prepare(`SELECT value FROM cogworks_settings WHERE key = ?`)
       .get("smtp.password") as { value: string };
     expect(raw.value).not.toBe("hunter2");
     expect(isEncrypted(raw.value)).toBe(true);
@@ -91,7 +91,7 @@ describe("setSetting / getSetting with encryption key set", () => {
   it("does not encrypt non-secret keys even with key set", () => {
     setSetting("theme.accent", "#ff00ff");
     const raw = (require("../db/client.ts").getDb() as any).$client
-      .prepare(`SELECT value FROM vaultbase_settings WHERE key = ?`)
+      .prepare(`SELECT value FROM cogworks_settings WHERE key = ?`)
       .get("theme.accent") as { value: string };
     expect(raw.value).toBe("#ff00ff");
     expect(isEncrypted(raw.value)).toBe(false);

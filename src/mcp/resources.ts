@@ -226,7 +226,7 @@ function readSettingsResource(): unknown {
 
 function readServerInfo(): unknown {
   return {
-    name: "vaultbase",
+    name: "cogworks",
     version: VAULTBASE_VERSION,
     protocol: MCP_PROTOCOL_VERSION,
     capabilities: ["tools", "resources", "prompts"],

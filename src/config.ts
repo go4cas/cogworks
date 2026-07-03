@@ -37,7 +37,7 @@ async function loadJwtSecret(dataDir: string): Promise<string> {
 }
 
 export async function loadConfig(): Promise<Config> {
-  const dataDir = process.env.VAULTBASE_DATA_DIR ?? "./vaultbase_data";
+  const dataDir = process.env.VAULTBASE_DATA_DIR ?? "./cogworks_data";
   if (!existsSync(dataDir)) mkdirSync(dataDir, { recursive: true });
 
   const uploadDir = join(dataDir, "uploads");

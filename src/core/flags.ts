@@ -1,7 +1,7 @@
 /**
  * Feature flag evaluation engine.
  *
- * Flags persist in `vaultbase_feature_flags`; this module loads them into
+ * Flags persist in `cogworks_feature_flags`; this module loads them into
  * a tiny in-memory cache (5 s TTL, busted on PATCH from the admin API)
  * and runs deterministic targeting + percentage-rollout matching against
  * an evaluation context.

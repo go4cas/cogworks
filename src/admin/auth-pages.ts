@@ -307,7 +307,7 @@ function otpPage(token: string, collection: string): string {
       result.style.display = 'block';
       var ta = document.getElementById('jwt');
       ta.value = json.data.token;
-      try { localStorage.setItem('vaultbase_user_token', json.data.token); } catch (_) {}
+      try { localStorage.setItem('cogworks_user_token', json.data.token); } catch (_) {}
       document.getElementById('copy').addEventListener('click', function () {
         ta.select();
         navigator.clipboard.writeText(ta.value);

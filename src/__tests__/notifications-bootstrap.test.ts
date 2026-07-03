@@ -49,7 +49,7 @@ async function adminToken(): Promise<string> {
     });
   return new jose.SignJWT({ id, email: "a@x.test" })
     .setProtectedHeader({ alg: "HS256" })
-    .setIssuer("vaultbase")
+    .setIssuer("cogworks")
     .setAudience("admin")
     .setIssuedAt()
     .setExpirationTime("1h")
@@ -93,15 +93,15 @@ describe("bootstrapNotificationCollections", () => {
     expect(provider?.options?.values).toEqual(["fcm", "apns"]);
   });
 
-  it("creates the underlying SQL tables (vb_notifications, vb_device_tokens)", async () => {
+  it("creates the underlying SQL tables (cw_notifications, cw_device_tokens)", async () => {
     await bootstrapNotificationCollections();
     const client = (getDb() as unknown as { $client: import("bun:sqlite").Database }).$client;
     const rows = client
       .prepare(
-        `SELECT name FROM sqlite_master WHERE type='table' AND name IN ('vb_notifications','vb_device_tokens')`,
+        `SELECT name FROM sqlite_master WHERE type='table' AND name IN ('cw_notifications','cw_device_tokens')`,
       )
       .all() as Array<{ name: string }>;
-    expect(rows.map((r) => r.name).sort()).toEqual(["vb_device_tokens", "vb_notifications"]);
+    expect(rows.map((r) => r.name).sort()).toEqual(["cw_device_tokens", "cw_notifications"]);
   });
 
   it("is idempotent on repeated calls", async () => {

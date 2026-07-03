@@ -118,7 +118,7 @@ async function decodeAfterStorage(val: unknown, field: FieldDef): Promise<unknow
 }
 
 /**
- * Auth-system columns on `vb_<auth-col>` that must never appear in API
+ * Auth-system columns on `cw_<auth-col>` that must never appear in API
  * responses. Stripped on every row projection regardless of caller.
  * Mirrors the contract enforced by /admin/users/:col in v0.10.
  */

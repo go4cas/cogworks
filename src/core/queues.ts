@@ -47,7 +47,7 @@ export interface JobContext {
   attempt: number;
   /** Queue name this job came from. */
   queue: string;
-  /** Job id (matches the row in vaultbase_jobs_log). */
+  /** Job id (matches the row in cogworks_jobs_log). */
   jobId: string;
   /** Helpers shared with hooks / routes / cron. */
   helpers: HookHelpers;
@@ -69,7 +69,7 @@ let cacheLoaded = false;
 
 /**
  * Built-in workers — registered in-source rather than via an admin-edited
- * `vaultbase_workers` row. Used by core features (e.g. notifications) that
+ * `cogworks_workers` row. Used by core features (e.g. notifications) that
  * need the queue's retry/backoff/dead-letter machinery without making the
  * operator paste boilerplate JS into the admin UI on every install.
  *

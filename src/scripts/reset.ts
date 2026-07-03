@@ -15,7 +15,7 @@ if (process.env.NODE_ENV === "production") {
   process.exit(1);
 }
 
-const dataDir = process.env.VAULTBASE_DATA_DIR ?? "./vaultbase_data";
+const dataDir = process.env.VAULTBASE_DATA_DIR ?? "./cogworks_data";
 const force = process.argv.includes("--force");
 
 const targets = [

@@ -61,7 +61,7 @@ describe("POST /api/auth/:collection/promote", () => {
 
     // DB row flipped — read from per-collection table.
     const row = getRawClient()
-      .prepare(`SELECT email, is_anonymous FROM vb_users WHERE id = ?`)
+      .prepare(`SELECT email, is_anonymous FROM cw_users WHERE id = ?`)
       .get(id) as { email: string; is_anonymous: number } | undefined;
     expect(row?.is_anonymous).toBe(0);
     expect(row?.email).toBe("real@test.local");
@@ -91,7 +91,7 @@ describe("POST /api/auth/:collection/promote", () => {
       }),
     );
     // v0.11: per-collection email uniqueness now enforced at validate-time
-    // (previously vb_<auth-col> was empty so uniqueness only fired at the
+    // (previously cw_<auth-col> was empty so uniqueness only fired at the
     // explicit dup-check). Either status surfaces "email taken".
     expect([409, 422]).toContain(res.status);
     const body = (await res.json()) as { error: string; code: number };
@@ -118,7 +118,7 @@ describe("POST /api/auth/:collection/promote", () => {
       collection: "users",
     })
       .setProtectedHeader({ alg: "HS256" })
-      .setIssuer("vaultbase")
+      .setIssuer("cogworks")
       .setAudience("user")
       .setExpirationTime("1h")
       .sign(new TextEncoder().encode(SECRET));

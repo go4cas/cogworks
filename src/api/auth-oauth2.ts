@@ -67,7 +67,7 @@ export function makeAuthOauth2Plugin(jwtSecret: string) {
       //  - Client provides `code_challenge` → server bakes it into the URL untouched
       //    and never stores anything; the client owns the verifier.
       //  - Client omits `code_challenge` → server generates a verifier, stashes it
-      //    in `vaultbase_auth_tokens` keyed by `state` (purpose="oauth2_pkce"), and
+      //    in `cogworks_auth_tokens` keyed by `state` (purpose="oauth2_pkce"), and
       //    bakes the derived challenge into the URL. Useful for confidential web
       //    flows where the caller can't easily keep the verifier across the redirect.
       .get("/auth/:collection/oauth2/authorize", async (c) => {

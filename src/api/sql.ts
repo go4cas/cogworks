@@ -305,7 +305,7 @@ interface SchemaForeignKey {
 interface SchemaTable {
   name: string;
   type: "table" | "view";
-  /** Convention-flag: vb_ tables back vaultbase collections; vaultbase_ tables are system; sqlite_ tables are SQLite internal. */
+  /** Convention-flag: cw_ tables back vaultbase collections; cogworks_ tables are system; sqlite_ tables are SQLite internal. */
   kind: "collection" | "system" | "user" | "sqlite";
   collectionName?: string;
   columns: SchemaColumn[];
@@ -324,8 +324,8 @@ const ROW_COUNT_CAP = 100_000;
 
 function tableKind(name: string): SchemaTable["kind"] {
   if (name.startsWith("sqlite_")) return "sqlite";
-  if (name.startsWith("vb_")) return "collection";
-  if (name.startsWith("vaultbase_")) return "system";
+  if (name.startsWith("cw_")) return "collection";
+  if (name.startsWith("cogworks_")) return "system";
   return "user";
 }
 

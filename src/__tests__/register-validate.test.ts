@@ -109,7 +109,7 @@ describe("logs.extractAuth propagates impersonated_by", () => {
   it("copies the JWT claim onto the AuthLogContext", async () => {
     const sec = new TextEncoder().encode(SECRET);
     const { SignJWT } = await import("jose");
-    // logs.extractAuth now enforces `iss = "vaultbase"` (matches production
+    // logs.extractAuth now enforces `iss = "cogworks"` (matches production
     // signer) — keep the rest of the claim shape unchanged.
     const token = await new SignJWT({
       id: "u1",
@@ -117,7 +117,7 @@ describe("logs.extractAuth propagates impersonated_by", () => {
       impersonated_by: "admin-42",
     })
       .setProtectedHeader({ alg: "HS256" })
-      .setIssuer("vaultbase")
+      .setIssuer("cogworks")
       .setAudience("user")
       .setExpirationTime("1h")
       .sign(sec);
@@ -136,7 +136,7 @@ describe("logs.extractAuth propagates impersonated_by", () => {
     const { SignJWT } = await import("jose");
     const token = await new SignJWT({ id: "u1", email: "u1@test.local" })
       .setProtectedHeader({ alg: "HS256" })
-      .setIssuer("vaultbase")
+      .setIssuer("cogworks")
       .setAudience("user")
       .setExpirationTime("1h")
       .sign(sec);

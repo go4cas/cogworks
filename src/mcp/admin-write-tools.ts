@@ -52,7 +52,7 @@ export function registerAdminWriteTools(reg: ToolRegistry): void {
           name: {
             type: "string",
             pattern: "^[A-Za-z_][A-Za-z0-9_]{0,62}$",
-            description: "SQL-safe identifier; will form `vb_<name>` table",
+            description: "SQL-safe identifier; will form `cw_<name>` table",
           },
           type: { type: "string", enum: ["base", "auth", "view"] },
           fields: {
@@ -149,7 +149,7 @@ export function registerAdminWriteTools(reg: ToolRegistry): void {
     definition: {
       name: "vaultbase.delete_collection",
       description:
-        "Drop a collection — drops the underlying vb_<name> table. Cascade rules on referencing relation fields fire as configured. Irreversible.",
+        "Drop a collection — drops the underlying cw_<name> table. Cascade rules on referencing relation fields fire as configured. Irreversible.",
       inputSchema: {
         type: "object",
         properties: { id_or_name: { type: "string" } },
@@ -668,7 +668,7 @@ export function registerAdminWriteTools(reg: ToolRegistry): void {
     definition: {
       name: "vaultbase.run_sql",
       description:
-        "Run a raw SQL query against the live SQLite DB. Read-only by default — write/DDL queries require `allow_write: true` and tear through every safety net (RBAC, validation, hooks, audit). Avoid unless absolutely necessary; use the typed tools instead. Bound result set: 100 rows.\n\nSchema convention: every collection (base + auth) has a `vb_<name>` table. Auth collections additionally have inline columns for `email`, `password_hash`, `email_verified`, `totp_secret`, `totp_enabled`, `is_anonymous`, `password_reset_at`. Inserting auth users via raw SQL bypasses password hashing + email-verification flows — prefer `POST /api/v1/auth/<col>/register` (or the existing typed CRUD path) for login-capable users.",
+        "Run a raw SQL query against the live SQLite DB. Read-only by default — write/DDL queries require `allow_write: true` and tear through every safety net (RBAC, validation, hooks, audit). Avoid unless absolutely necessary; use the typed tools instead. Bound result set: 100 rows.\n\nSchema convention: every collection (base + auth) has a `cw_<name>` table. Auth collections additionally have inline columns for `email`, `password_hash`, `email_verified`, `totp_secret`, `totp_enabled`, `is_anonymous`, `password_reset_at`. Inserting auth users via raw SQL bypasses password hashing + email-verification flows — prefer `POST /api/v1/auth/<col>/register` (or the existing typed CRUD path) for login-capable users.",
       inputSchema: {
         type: "object",
         properties: {

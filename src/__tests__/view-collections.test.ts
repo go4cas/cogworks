@@ -28,7 +28,7 @@ afterEach(() => closeDb());
 describe("validateViewQuery", () => {
   it("accepts a single SELECT", () => {
     expect(() => validateViewQuery("SELECT 1 AS x")).not.toThrow();
-    expect(() => validateViewQuery("  select id, title FROM vb_posts  ")).not.toThrow();
+    expect(() => validateViewQuery("  select id, title FROM cw_posts  ")).not.toThrow();
     expect(() => validateViewQuery("SELECT 1; ")).not.toThrow(); // trailing semicolon stripped
   });
 
@@ -72,7 +72,7 @@ describe("view collection lifecycle", () => {
     const col = await createCollection({
       name: "post_titles",
       type: "view",
-      view_query: "SELECT id, title FROM vb_posts",
+      view_query: "SELECT id, title FROM cw_posts",
       fields: JSON.stringify([]),
     });
     expect(col.type).toBe("view");
@@ -91,7 +91,7 @@ describe("view collection lifecycle", () => {
     const col = await createCollection({
       name: "post_titles",
       type: "view",
-      view_query: "SELECT id, title FROM vb_posts",
+      view_query: "SELECT id, title FROM cw_posts",
     });
     expect(col.list_rule).toBe("");
     expect(col.view_rule).toBe("");
@@ -108,12 +108,12 @@ describe("view collection lifecycle", () => {
     const col = await createCollection({
       name: "post_titles",
       type: "view",
-      view_query: "SELECT id, title FROM vb_posts WHERE title = 'alpha'",
+      view_query: "SELECT id, title FROM cw_posts WHERE title = 'alpha'",
     });
     let result = await listRecords("post_titles");
     expect(result.totalItems).toBe(1);
 
-    await updateCollection(col.id, { view_query: "SELECT id, title FROM vb_posts" });
+    await updateCollection(col.id, { view_query: "SELECT id, title FROM cw_posts" });
     result = await listRecords("post_titles");
     expect(result.totalItems).toBe(2);
   });
@@ -123,7 +123,7 @@ describe("view collection lifecycle", () => {
     const col = await createCollection({
       name: "post_titles",
       type: "view",
-      view_query: "SELECT id, title FROM vb_posts",
+      view_query: "SELECT id, title FROM cw_posts",
     });
     // Caller customizes a field type from text → editor; query unchanged.
     await updateCollection(col.id, {
@@ -145,7 +145,7 @@ describe("view collections are read-only via the records API", () => {
     await createCollection({
       name: "post_titles",
       type: "view",
-      view_query: "SELECT id, title FROM vb_posts",
+      view_query: "SELECT id, title FROM cw_posts",
     });
   }
 
@@ -179,7 +179,7 @@ describe("inferViewColumns + fieldsFromViewColumns", () => {
       name: "posts",
       fields: JSON.stringify([{ name: "title", type: "text" }]),
     });
-    const cols = inferViewColumns("SELECT id, title FROM vb_posts");
+    const cols = inferViewColumns("SELECT id, title FROM cw_posts");
     expect(cols).toContain("id");
     expect(cols).toContain("title");
   });

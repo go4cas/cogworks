@@ -91,7 +91,7 @@ describe("MCP — initialize handshake", () => {
     };
     expect(result.protocolVersion).toBe(MCP_PROTOCOL_VERSION);
     expect(result.capabilities.tools).toBeTruthy();
-    expect(result.serverInfo.name).toBe("vaultbase");
+    expect(result.serverInfo.name).toBe("cogworks");
   });
 
   it("notifications/initialized produces no response", async () => {
@@ -464,7 +464,7 @@ describe("MCP — Phase 2 admin tools", () => {
         method: "tools/call",
         params: {
           name: "vaultbase.run_sql",
-          arguments: { query: "DELETE FROM vaultbase_admin" },
+          arguments: { query: "DELETE FROM cogworks_admin" },
         },
       },
       mkCtx(["mcp:sql"]),

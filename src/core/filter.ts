@@ -345,7 +345,7 @@ function compileCollectionRef(
     throw new Error("@collection.* join depth exceeded");
   }
   try {
-    const targetTable = `vb_${op.collection}`;
+    const targetTable = `cw_${op.collection}`;
     if (!IDENT_RE.test(targetTable)) throw new Error(`invalid table: ${targetTable}`);
 
     const head = op.path[0]!;
@@ -409,7 +409,7 @@ function compileViaRelationRef(
     throw new Error("_via_ join depth exceeded");
   }
   try {
-    const targetTable = `vb_${op.targetCollection}`;
+    const targetTable = `cw_${op.targetCollection}`;
     if (!IDENT_RE.test(targetTable)) throw new Error(`invalid table: ${targetTable}`);
 
     // Default selection — id of the matching back-related rows. With a path,

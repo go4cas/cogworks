@@ -1,9 +1,9 @@
 /**
  * Backend for the **Settings → Security** tab.
  *
- *   - Active admin sessions (vaultbase_admin_sessions): record on issue,
+ *   - Active admin sessions (cogworks_admin_sessions): record on issue,
  *     listed via UI, revoked one-by-one or all-at-once.
- *   - Brute-force lockout (vaultbase_login_failures): records failed
+ *   - Brute-force lockout (cogworks_login_failures): records failed
  *     login attempts keyed by email + ip; checks reject within window.
  *   - Trusted proxies: setting overrides VAULTBASE_TRUSTED_PROXIES env.
  *   - Secrets fingerprints: SHA-256 first 8 hex chars of JWT/AES keys.

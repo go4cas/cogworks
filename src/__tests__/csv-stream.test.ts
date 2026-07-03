@@ -34,7 +34,7 @@ afterEach(() => {
 });
 
 async function signAdmin(): Promise<string> {
-  // verifyAuthToken now requires `iss = "vaultbase"` and a matching admin
+  // verifyAuthToken now requires `iss = "cogworks"` and a matching admin
   // row in the DB.
   const { admin: adminTable } = await import("../db/schema.ts");
   const now = Math.floor(Date.now() / 1000);
@@ -51,7 +51,7 @@ async function signAdmin(): Promise<string> {
   }
   return await new jose.SignJWT({ id: "a1", email: "admin@test.local", jti: crypto.randomUUID() })
     .setProtectedHeader({ alg: "HS256" })
-    .setIssuer("vaultbase")
+    .setIssuer("cogworks")
     .setAudience("admin")
     .setIssuedAt(now)
     .setExpirationTime("1h")

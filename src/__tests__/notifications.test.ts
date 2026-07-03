@@ -351,7 +351,7 @@ describe("dispatchNotification", () => {
     setSetting("notifications.providers.onesignal.api_key", "k");
   });
 
-  it("skips inbox when vb_notifications doesn't exist (still enqueues push)", async () => {
+  it("skips inbox when cw_notifications doesn't exist (still enqueues push)", async () => {
     const res = await dispatchNotification("user-1", {
       title: "T",
       body: "B",
@@ -362,10 +362,10 @@ describe("dispatchNotification", () => {
     expect(res.enqueued[0]!.provider).toBe("onesignal");
   });
 
-  it("inserts inbox row when vb_notifications exists", async () => {
+  it("inserts inbox row when cw_notifications exists", async () => {
     const client = (getDb() as unknown as { $client: import("bun:sqlite").Database }).$client;
     client.exec(`
-      CREATE TABLE vb_notifications (
+      CREATE TABLE cw_notifications (
         id TEXT PRIMARY KEY, user TEXT NOT NULL, type TEXT, title TEXT, body TEXT,
         data TEXT, created_at INTEGER NOT NULL DEFAULT (unixepoch())
       )`);
@@ -377,7 +377,7 @@ describe("dispatchNotification", () => {
     });
     expect(res.inboxRowId).not.toBeNull();
     const row = client
-      .prepare(`SELECT * FROM vb_notifications WHERE id = ?`)
+      .prepare(`SELECT * FROM cw_notifications WHERE id = ?`)
       .get(res.inboxRowId) as { user: string; title: string; type: string };
     expect(row.user).toBe("user-1");
     expect(row.title).toBe("T");
@@ -387,7 +387,7 @@ describe("dispatchNotification", () => {
   it("opts.inbox=false skips inbox even when table exists", async () => {
     const client = (getDb() as unknown as { $client: import("bun:sqlite").Database }).$client;
     client.exec(`
-      CREATE TABLE vb_notifications (
+      CREATE TABLE cw_notifications (
         id TEXT PRIMARY KEY, user TEXT NOT NULL, type TEXT, title TEXT, body TEXT,
         data TEXT, created_at INTEGER NOT NULL DEFAULT (unixepoch())
       )`);

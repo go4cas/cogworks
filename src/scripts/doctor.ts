@@ -6,12 +6,12 @@
  * Checks:
  *   - Custom field name collisions with auth columns (email, password_hash,
  *     ...) per auth collection. Blocker: rename the field first.
- *   - Stranded rows in `vb_<auth-col>` lacking email/password — typically
+ *   - Stranded rows in `cw_<auth-col>` lacking email/password — typically
  *     hand-INSERTed via run_sql or CSV import. Blocker: drop or migrate
  *     manually before the auth-table swap.
  *   - Duplicate emails within an auth collection (would break the new
  *     UNIQUE index). Blocker: reconcile.
- *   - JSON `data` keys on `vaultbase_users` that don't map to any custom
+ *   - JSON `data` keys on `cogworks_users` that don't map to any custom
  *     field. Warning: data lost on migration unless field added.
  *
  * Read-only — never mutates state. Just inspects.
@@ -49,15 +49,15 @@ export function runDoctor(dbPath: string): DoctorReport {
   try {
     // No legacy auth state? Doctor is always green for fresh installs.
     const usersExists = db
-      .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='vaultbase_users'`)
+      .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='cogworks_users'`)
       .get() as { name: string } | undefined;
     const collectionsExists = db
-      .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='vaultbase_collections'`)
+      .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='cogworks_collections'`)
       .get() as { name: string } | undefined;
     if (!collectionsExists) return { blockers, warnings, ok: true };
 
     const authCols = db
-      .prepare(`SELECT id, name, fields FROM vaultbase_collections WHERE type='auth'`)
+      .prepare(`SELECT id, name, fields FROM cogworks_collections WHERE type='auth'`)
       .all() as Array<{ id: string; name: string; fields: string }>;
 
     for (const col of authCols) {
@@ -87,8 +87,8 @@ export function runDoctor(dbPath: string): DoctorReport {
         }
       }
 
-      // 2. Stranded rows in vb_<col>.
-      const tbl = `vb_${col.name}`;
+      // 2. Stranded rows in cw_<col>.
+      const tbl = `cw_${col.name}`;
       const tblExists = db
         .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`)
         .get(tbl) as { name: string } | undefined;
@@ -132,11 +132,11 @@ export function runDoctor(dbPath: string): DoctorReport {
         }
       }
 
-      // 3. Duplicate emails in vaultbase_users for this collection.
+      // 3. Duplicate emails in cogworks_users for this collection.
       if (usersExists) {
         const dups = db
           .prepare(
-            `SELECT email, count(*) AS n FROM vaultbase_users
+            `SELECT email, count(*) AS n FROM cogworks_users
            WHERE collection_id = ? GROUP BY email HAVING n > 1 LIMIT 10`,
           )
           .all(col.id) as Array<{ email: string; n: number }>;
@@ -144,14 +144,14 @@ export function runDoctor(dbPath: string): DoctorReport {
           blockers.push({
             level: "blocker",
             collection: col.name,
-            message: `duplicate email '${d.email}' x${d.n} in vaultbase_users — UNIQUE index on the per-collection table will reject this.`,
+            message: `duplicate email '${d.email}' x${d.n} in cogworks_users — UNIQUE index on the per-collection table will reject this.`,
           });
         }
 
         // 4. JSON `data` keys not mapped to any custom field.
         try {
           const rows = db
-            .prepare(`SELECT data FROM vaultbase_users WHERE collection_id = ? LIMIT 200`)
+            .prepare(`SELECT data FROM cogworks_users WHERE collection_id = ? LIMIT 200`)
             .all(col.id) as Array<{ data: string }>;
           const seen = new Set<string>();
           for (const r of rows) {
@@ -167,7 +167,7 @@ export function runDoctor(dbPath: string): DoctorReport {
               warnings.push({
                 level: "warning",
                 collection: col.name,
-                message: `JSON key '${k}' present in vaultbase_users.data but no matching custom field on the collection. Will be dropped on migration unless you add a field.`,
+                message: `JSON key '${k}' present in cogworks_users.data but no matching custom field on the collection. Will be dropped on migration unless you add a field.`,
               });
             }
           }

@@ -109,7 +109,7 @@ export interface HookHelpers extends ExtraHookHelpers {
   ): Promise<{ jobId: string; deduped: boolean }>;
   /**
    * Push notification + in-app inbox shorthand. Inserts one row in
-   * `vb_notifications` (drives realtime + the in-app inbox UI) and enqueues
+   * `cw_notifications` (drives realtime + the in-app inbox UI) and enqueues
    * one `_notify` queue job per enabled provider (OneSignal, FCM). The
    * trigger code is provider-agnostic — operators flip providers in
    * Settings, not in hook code.
