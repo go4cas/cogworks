@@ -6,6 +6,7 @@ import { jobs } from "../db/schema.ts";
 import { ValidationError } from "./validate.ts";
 import { makeHookHelpers, type HookHelpers } from "./hooks.ts";
 import { appendHookLog } from "./file-logger.ts";
+import { runWithTimeout, userCodeTimeoutMs } from "./user-code.ts";
 
 /**
  * Cron-style scheduled jobs.
@@ -153,7 +154,7 @@ export async function runJob(jobId: string): Promise<{ ok: boolean; error?: stri
   const ctx: JobContext = { helpers, scheduledAt: now };
 
   try {
-    await fn(ctx);
+    await runWithTimeout(() => fn(ctx), userCodeTimeoutMs(), `job '${row.name || row.id}'`);
     await db
       .update(jobs)
       .set({

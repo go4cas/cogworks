@@ -4,6 +4,7 @@ import { log } from "./log.ts";
 import { jobsLog, workers } from "../db/schema.ts";
 import { ValidationError } from "./validate.ts";
 import { makeHookHelpers, type HookHelpers } from "./hooks.ts";
+import { runWithTimeout, userCodeTimeoutMs } from "./user-code.ts";
 
 /**
  * In-process job queue + worker engine. Phase 1 of the Redis brainstorm —
@@ -305,7 +306,11 @@ async function runJob(worker: CompiledWorker, job: typeof jobsLog.$inferSelect):
 
   const finishedAt = (): number => Math.floor(Date.now() / 1000);
   try {
-    await worker.fn(ctx);
+    await runWithTimeout(
+      () => worker.fn(ctx),
+      userCodeTimeoutMs(),
+      `worker '${worker.name || worker.queue}' (job ${job.id})`,
+    );
     await db
       .update(jobsLog)
       .set({

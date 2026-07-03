@@ -7,6 +7,7 @@ import { ValidationError } from "./validate.ts";
 import { appendHookLog } from "./file-logger.ts";
 import { sendEmail } from "./email.ts";
 import { recordRuleEval, type RuleOutcome } from "./request-context.ts";
+import { runWithTimeout, userCodeTimeoutMs } from "./user-code.ts";
 import type { AuthContext } from "./rules.ts";
 import { makeExtraHelpers, type ExtraHookHelpers } from "./hook-helpers-extra.ts";
 
@@ -216,7 +217,11 @@ export async function runBeforeHook(
     if (effectiveReq) helperCtx.request = effectiveReq;
     const helpers = makeHookHelpers(helperCtx);
     try {
-      await h.fn({ ...ctx, helpers });
+      await runWithTimeout(
+        () => h.fn({ ...ctx, helpers }),
+        userCodeTimeoutMs(),
+        `hook '${h.name || h.id}'`,
+      );
     } catch (e) {
       if (e instanceof ValidationError) throw e;
       const msg = e instanceof Error ? e.message : String(e);
@@ -245,7 +250,11 @@ export function runAfterHook(
       if (effectiveReq) helperCtx.request = effectiveReq;
       const helpers = makeHookHelpers(helperCtx);
       try {
-        await h.fn({ ...ctx, helpers });
+        await runWithTimeout(
+          () => h.fn({ ...ctx, helpers }),
+          userCodeTimeoutMs(),
+          `after-hook '${h.name || h.id}'`,
+        );
       } catch (e) {
         log.error("after-hook threw", { scope: "hooks", hookId: h.id, err: e });
       }

@@ -24,6 +24,14 @@ Each compiled function gets a `helpers` object including `helpers.http` /
 `helpers.fetch` (untrusted-network egress) and `helpers.query` (passes through
 the rule engine).
 
+**Execution timeout (since E-6):** every hook / route / job / worker invocation
+runs under a `Promise.race` budget (`execution.timeout_ms` setting, default
+`5000`; `0` disables) so a hung `await` (e.g. an unresponsive external service)
+can't block the request or an event-loop tick indefinitely. Caveat: this only
+interrupts code that *yields* to the event loop — a synchronous busy-loop
+(`while (true) {}`) still blocks it, since the timer can't fire. Terminating
+sync loops would require running user code in a Worker; not yet done.
+
 **`helpers.http` SSRF guard (since v0.1.4):** every request runs through
 `core/hook-egress.ts::assertEgressAllowed` before `fetch()`. The default deny
 list blocks RFC1918 private space (10/8, 172.16/12, 192.168/16), CGNAT

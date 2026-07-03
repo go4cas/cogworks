@@ -7,6 +7,7 @@ import { ValidationError } from "./validate.ts";
 import { makeHookHelpers, type HookHelpers } from "./hooks.ts";
 import { appendHookLog } from "./file-logger.ts";
 import { insertLog } from "../api/logs.ts";
+import { runWithTimeout, userCodeTimeoutMs } from "./user-code.ts";
 import type { AuthContext } from "./rules.ts";
 
 async function extractAuth(request: Request, jwtSecret: string): Promise<AuthContext | null> {
@@ -199,7 +200,11 @@ export async function dispatchCustomRoute(
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
   const fullPath = `/api/v1/custom${innerPath}`;
   try {
-    const result = await match.route.fn(ctx);
+    const result = await runWithTimeout(
+      () => match.route.fn(ctx),
+      userCodeTimeoutMs(),
+      `route '${match.route.method} ${match.route.path}'`,
+    );
     void insertLog(
       request.method,
       fullPath,
