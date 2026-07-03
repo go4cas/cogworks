@@ -6,10 +6,10 @@ describe("config", () => {
     delete process.env.VAULTBASE_DATA_DIR;
     const config = {
       port: parseInt(process.env.VAULTBASE_PORT ?? "8090", 10),
-      dataDir: process.env.VAULTBASE_DATA_DIR ?? "./vaultbase_data",
+      dataDir: process.env.VAULTBASE_DATA_DIR ?? "./cogworks_data",
     };
     expect(config.port).toBe(8090);
-    expect(config.dataDir).toBe("./vaultbase_data");
+    expect(config.dataDir).toBe("./cogworks_data");
   });
 
   it("reads port from env", () => {

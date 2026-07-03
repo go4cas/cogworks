@@ -2,7 +2,7 @@
  * Record history — append-only audit + restore log.
  *
  * Each write to a collection where `history_enabled=1` produces a row in
- * `vaultbase_record_history` capturing the post-write state (or pre-delete
+ * `cogworks_record_history` capturing the post-write state (or pre-delete
  * state on delete) plus the actor that triggered the change.
  *
  * Out of scope (intentionally — keeps the v1 footprint small):

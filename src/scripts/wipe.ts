@@ -13,7 +13,7 @@
  *   - Detects production signals (NODE_ENV / VAULTBASE_ENV / dataDir
  *     paths typical of system-managed installs). On a hit, the script
  *     refuses to run unless `--force` is passed alongside `--yes`.
- *   - Reports the row counts in `vaultbase_users` + `vaultbase_admin` +
+ *   - Reports the row counts in `cogworks_users` + `cogworks_admin` +
  *     auth-collection tables in the dry-run so the operator can see
  *     what's about to disappear.
  *
@@ -130,25 +130,25 @@ function summarizeDb(dbPath: string): DbSummary | null {
       records = 0;
     try {
       collections = (
-        db.prepare(`SELECT count(*) AS n FROM vaultbase_collections`).get() as { n: number }
+        db.prepare(`SELECT count(*) AS n FROM cogworks_collections`).get() as { n: number }
       ).n;
     } catch {
       /* table missing */
     }
     try {
-      admins = (db.prepare(`SELECT count(*) AS n FROM vaultbase_admin`).get() as { n: number }).n;
+      admins = (db.prepare(`SELECT count(*) AS n FROM cogworks_admin`).get() as { n: number }).n;
     } catch {
       /* missing */
     }
 
     // Auth collections: per-table count.
     try {
-      const cols = db.prepare(`SELECT name, type FROM vaultbase_collections`).all() as Array<{
+      const cols = db.prepare(`SELECT name, type FROM cogworks_collections`).all() as Array<{
         name: string;
         type: string;
       }>;
       for (const c of cols) {
-        const tbl = `"vb_${c.name.replace(/"/g, '""')}"`;
+        const tbl = `"cw_${c.name.replace(/"/g, '""')}"`;
         try {
           const cnt = (db.prepare(`SELECT count(*) AS n FROM ${tbl}`).get() as { n: number }).n;
           if (c.type === "auth") users += cnt;

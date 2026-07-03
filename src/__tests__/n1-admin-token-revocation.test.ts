@@ -1,6 +1,6 @@
 /**
  * Regression test for N-1: every admin-API endpoint must reject revoked
- * admin JWTs (jti in vaultbase_token_revocations) and password-reset-stale
+ * admin JWTs (jti in cogworks_token_revocations) and password-reset-stale
  * admin JWTs (iat < admin.password_reset_at).
  *
  * Pre-fix, each plugin had a local `isAdmin` calling `jose.jwtVerify`
@@ -47,7 +47,7 @@ async function signAdmin(opts: { id?: string; jti?: string; iat?: number } = {})
   }
   return await new jose.SignJWT({ id, email: "admin@test.local", jti })
     .setProtectedHeader({ alg: "HS256" })
-    .setIssuer("vaultbase")
+    .setIssuer("cogworks")
     .setAudience("admin")
     .setIssuedAt(now)
     .setExpirationTime("1h")

@@ -1,7 +1,7 @@
 /**
  * Cross-Origin Resource Sharing.
  *
- * Reads runtime config from `vaultbase_settings`:
+ * Reads runtime config from `cogworks_settings`:
  *   - `cors.origins`     — comma-separated, `*` wildcard, blank = block cross-origin
  *   - `cors.methods`     — comma-separated, default GET,POST,PUT,PATCH,DELETE,OPTIONS
  *   - `cors.headers`     — comma-separated, default Authorization,Content-Type,If-Match,X-VB-Idempotency-Key

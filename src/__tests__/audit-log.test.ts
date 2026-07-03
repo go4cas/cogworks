@@ -40,7 +40,7 @@ async function signAdmin(id = "admin-1"): Promise<string> {
     });
   return await new jose.SignJWT({ id, email: `${id}@test.local`, jti: crypto.randomUUID() })
     .setProtectedHeader({ alg: "HS256" })
-    .setIssuer("vaultbase")
+    .setIssuer("cogworks")
     .setAudience("admin")
     .setIssuedAt(now)
     .setExpirationTime("1h")

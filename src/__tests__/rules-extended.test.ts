@@ -12,7 +12,7 @@ describe("Phase 1 — !~ NOT LIKE operator", () => {
   });
 
   it("compiles to NOT LIKE in SQL", () => {
-    const r = parseFilter(`title !~ "spam"`, "vb_posts", USER);
+    const r = parseFilter(`title !~ "spam"`, "cw_posts", USER);
     expect(r?.sql).toContain("NOT LIKE");
     expect(r?.params).toContain("%spam%");
   });
@@ -46,7 +46,7 @@ describe("Phase 1 — array-prefix operators", () => {
   });
 
   it("compiles to EXISTS json_each subquery", () => {
-    const r = parseFilter(`tags ?= "urgent"`, "vb_posts", USER);
+    const r = parseFilter(`tags ?= "urgent"`, "cw_posts", USER);
     expect(r?.sql).toContain("EXISTS");
     expect(r?.sql).toContain("json_each");
     expect(r?.params).toContain("urgent");
@@ -89,10 +89,10 @@ describe("Phase 1 — @request.* expansions", () => {
   it("@request.headers.x reads a header", () => {
     expect(
       evaluateRule(
-        `@request.headers.x_org = "vaultbase"`,
+        `@request.headers.x_org = "cogworks"`,
         USER,
         {},
-        { headers: { x_org: "vaultbase" } },
+        { headers: { x_org: "cogworks" } },
       ),
     ).toBe(true);
   });
@@ -136,7 +136,7 @@ describe("Phase 1 — datetime macros", () => {
   });
 
   it("@year compiles into the SQL filter", () => {
-    const r = parseFilter(`year = @year`, "vb_posts", USER);
+    const r = parseFilter(`year = @year`, "cw_posts", USER);
     expect(r?.sql).toContain("?");
     expect(r?.params.length).toBeGreaterThanOrEqual(1);
   });
@@ -181,13 +181,13 @@ describe("Phase 1 — security: header redaction is caller's responsibility", ()
 
 describe("Phase 1 — SQL identifier hardening", () => {
   it("rejects invalid table name", () => {
-    expect(() => parseFilter(`title = "x"`, "vb_posts; DROP TABLE x", USER)).toThrow();
+    expect(() => parseFilter(`title = "x"`, "cw_posts; DROP TABLE x", USER)).toThrow();
   });
 
   it("rejects field names with quotes", () => {
     // The expression parser refuses non-word chars; make sure we don't
     // accidentally allow them through `field.path` segments.
-    const ast = parseFilter(`weird = "x"`, "vb_posts", USER);
+    const ast = parseFilter(`weird = "x"`, "cw_posts", USER);
     expect(ast).not.toBeNull();
   });
 });

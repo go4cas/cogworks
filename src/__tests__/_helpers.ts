@@ -26,7 +26,7 @@ export async function ensureAuthCollection(
   return col;
 }
 
-/** Insert an auth user directly into `vb_<col>`. Returns the row id. */
+/** Insert an auth user directly into `cw_<col>`. Returns the row id. */
 export async function seedAuthUser(opts: {
   collection: string;
   id?: string;
@@ -60,7 +60,7 @@ export async function signUserJwt(
   const now = Math.floor(Date.now() / 1000);
   return await new jose.SignJWT({ id, email, collection: collectionName })
     .setProtectedHeader({ alg: "HS256" })
-    .setIssuer("vaultbase")
+    .setIssuer("cogworks")
     .setAudience("user")
     .setIssuedAt(now)
     .setExpirationTime("1h")

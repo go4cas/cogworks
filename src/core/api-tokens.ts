@@ -17,8 +17,8 @@
  * lets log scanners + secret-scanning tools detect leaked tokens. The
  * underlying JWT carries audience="api", jti=<token id>, plus name/scopes
  * claims for display. Verification is signature + jti lookup in the
- * vaultbase_api_tokens table; revoked tokens have revoked_at set AND a
- * row in vaultbase_token_revocations so the existing JWT verifier
+ * cogworks_api_tokens table; revoked tokens have revoked_at set AND a
+ * row in cogworks_token_revocations so the existing JWT verifier
  * short-circuits before this module is even called.
  */
 

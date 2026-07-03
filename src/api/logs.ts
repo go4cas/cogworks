@@ -4,7 +4,7 @@ import { Type as t } from "@sinclair/typebox";
 import { jsonBody } from "./validator.ts";
 import * as jose from "jose";
 import { timeFor } from "../core/perf-metrics.ts";
-import { requireAdmin } from "../core/sec.ts";
+import { ISSUER, requireAdmin } from "../core/sec.ts";
 import { isAdminApiPath } from "../core/api-paths.ts";
 import {
   appendLogEntry,
@@ -145,7 +145,7 @@ export async function extractAuth(
     // recheck-principal pass — even a revoked-since-this-request token
     // should still show who originated the call. The handler that
     // serviced the request already enforced the live verification.
-    const { payload } = await jose.jwtVerify(token, secret, { issuer: "vaultbase" });
+    const { payload } = await jose.jwtVerify(token, secret, { issuer: ISSUER });
     const aud = Array.isArray(payload.aud) ? payload.aud[0] : payload.aud;
     if (aud !== "user" && aud !== "admin") return null;
     const ctx: AuthLogContext = {

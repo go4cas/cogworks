@@ -8,7 +8,7 @@ import { normalizeApiPath } from "../core/api-paths.ts";
 /**
  * Per-IP, per-rule token-bucket rate limiter.
  *
- * Rules are stored in `vaultbase_settings` under key `rate_limit.rules` as a
+ * Rules are stored in `cogworks_settings` under key `rate_limit.rules` as a
  * JSON array of `{ label, max, windowMs, audience }`. The first matching
  * rule (by order) is consumed.
  *
@@ -115,7 +115,7 @@ function loadConfig(): Config {
   try {
     const client = (getDb() as unknown as { $client: Database }).$client;
     const rows = client
-      .prepare(`SELECT key, value FROM vaultbase_settings WHERE key LIKE 'rate_limit.%'`)
+      .prepare(`SELECT key, value FROM cogworks_settings WHERE key LIKE 'rate_limit.%'`)
       .all() as Array<{ key: string; value: string }>;
     let rulesFromDb: RateLimitRule[] | null = null;
     let legacyMax: number | null = null;

@@ -32,7 +32,7 @@ export interface VerifiedAuth extends AuthContext {
   viaApiToken?: boolean;
 }
 
-export const ISSUER = "vaultbase";
+export const ISSUER = "cogworks";
 
 /**
  * Pinned argon2id parameters so a Bun upgrade cannot silently downgrade
@@ -169,7 +169,7 @@ export async function verifyAuthToken(
         if (!a) return null;
         if (typeof ctx.iat === "number" && a.password_reset_at > ctx.iat) return null;
       } else {
-        // v0.11: user-token recheck routes to `vb_<col>` via the JWT
+        // v0.11: user-token recheck routes to `cw_<col>` via the JWT
         // `collection` claim. Tokens minted before v0.11 lack the claim
         // and now hard-fail — users re-login on upgrade. Documented.
         const collectionName = typeof payload.collection === "string" ? payload.collection : null;
@@ -388,7 +388,7 @@ export async function hmacRecoveryCode(code: string, jwtSecret: string): Promise
 
 /**
  * Extract a bearer token from `Authorization: Bearer …` OR the
- * `vaultbase_admin_token` / `vaultbase_user_token` cookie. Cookie path lets
+ * `cogworks_admin_token` / `cogworks_user_token` cookie. Cookie path lets
  * the admin SPA migrate off `localStorage` without changing every API call.
  *
  * Also strips the `vbat_` API-token prefix when present so downstream
@@ -406,7 +406,7 @@ export function extractBearer(request: Request): string | null {
   if (!cookieHeader) return null;
   for (const part of cookieHeader.split(";")) {
     const [k, v] = part.trim().split("=");
-    if (k === "vaultbase_admin_token" || k === "vaultbase_user_token") {
+    if (k === "cogworks_admin_token" || k === "cogworks_user_token") {
       return v ? decodeURIComponent(v) : null;
     }
   }

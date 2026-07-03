@@ -78,13 +78,13 @@ function buildFileRequestContext(
   }
   // `@request.ip` and `@file.*` are read-only — surfaced via the `headers` map
   // so the existing rule engine doesn't need a new operand kind. Rule authors
-  // write `@request.headers.x_vb_ip = '1.2.3.4'`-style — but for ergonomics we
+  // write `@request.headers.x_cw_ip = '1.2.3.4'`-style — but for ergonomics we
   // also expose them under conventional names.
-  headers.x_vb_ip = ip;
-  headers.x_vb_file_field = meta.field_name;
-  headers.x_vb_file_mime = meta.mime_type;
-  headers.x_vb_file_size = String(meta.size);
-  headers.x_vb_collection = collectionName;
+  headers.x_cw_ip = ip;
+  headers.x_cw_file_field = meta.field_name;
+  headers.x_cw_file_mime = meta.mime_type;
+  headers.x_cw_file_size = String(meta.size);
+  headers.x_cw_collection = collectionName;
   return {
     method: request.method.toUpperCase(),
     context: "protectedFile",

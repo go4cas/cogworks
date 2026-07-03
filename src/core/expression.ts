@@ -69,7 +69,7 @@ export type Operand =
   /**
    * Back-relation: `<targetCollection>_via_<refField>` — references the
    * collection that has a relation field pointing back at this collection.
-   * Compiles to a subquery joining vb_<targetCollection> on `<refField> = <self>.id`.
+   * Compiles to a subquery joining cw_<targetCollection> on `<refField> = <self>.id`.
    */
   | {
       kind: "viaRelation";

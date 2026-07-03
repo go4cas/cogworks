@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-export const collections = sqliteTable("vaultbase_collections", {
+export const collections = sqliteTable("cogworks_collections", {
   id: text("id").primaryKey(),
   name: text("name").notNull().unique(),
   type: text("type").notNull().default("base"),
@@ -12,7 +12,7 @@ export const collections = sqliteTable("vaultbase_collections", {
   create_rule: text("create_rule"),
   update_rule: text("update_rule"),
   delete_rule: text("delete_rule"),
-  /** When 1, every record write produces a `vaultbase_record_history` row. */
+  /** When 1, every record write produces a `cogworks_record_history` row. */
   history_enabled: integer("history_enabled").notNull().default(0),
   created_at: integer("created_at").notNull().default(sql`(unixepoch())`),
   updated_at: integer("updated_at").notNull().default(sql`(unixepoch())`),
@@ -23,7 +23,7 @@ export const collections = sqliteTable("vaultbase_collections", {
  * `history_enabled=1`. Snapshot is the post-write record state on
  * create/update, and the pre-delete state on delete.
  */
-export const recordHistory = sqliteTable("vaultbase_record_history", {
+export const recordHistory = sqliteTable("cogworks_record_history", {
   id: text("id").primaryKey(),
   collection: text("collection").notNull(),
   record_id: text("record_id").notNull(),
@@ -39,7 +39,7 @@ export const recordHistory = sqliteTable("vaultbase_record_history", {
   at: integer("at").notNull().default(sql`(unixepoch())`),
 });
 
-export const users = sqliteTable("vaultbase_users", {
+export const users = sqliteTable("cogworks_users", {
   id: text("id").primaryKey(),
   collection_id: text("collection_id")
     .notNull()
@@ -55,7 +55,7 @@ export const users = sqliteTable("vaultbase_users", {
   updated_at: integer("updated_at").notNull().default(sql`(unixepoch())`),
 });
 
-export const authTokens = sqliteTable("vaultbase_auth_tokens", {
+export const authTokens = sqliteTable("cogworks_auth_tokens", {
   id: text("id").primaryKey(),
   user_id: text("user_id").notNull(),
   collection_id: text("collection_id").notNull(),
@@ -75,7 +75,7 @@ export const authTokens = sqliteTable("vaultbase_auth_tokens", {
  * — second use is detected by the conflict and rejected with HTTP 410. Rows
  * older than 24h are pruned by the periodic cleanup task.
  */
-export const fileTokenUses = sqliteTable("vaultbase_file_token_uses", {
+export const fileTokenUses = sqliteTable("cogworks_file_token_uses", {
   jti: text("jti").primaryKey(),
   used_at: integer("used_at").notNull(),
   ip: text("ip"),
@@ -87,13 +87,13 @@ export const fileTokenUses = sqliteTable("vaultbase_file_token_uses", {
  * One row per minted token. The token's JWT carries `audience: "api"` and
  * its `jti` matches `id` here, so verification = signature check + jti
  * lookup against this table. Setting `revoked_at` AND inserting the jti
- * into `vaultbase_token_revocations` (existing) makes the verifier reject
+ * into `cogworks_token_revocations` (existing) makes the verifier reject
  * future use cleanly.
  *
  * The plaintext token value is NEVER stored — only the metadata. The
  * mint endpoint returns the token to the caller exactly once.
  */
-export const apiTokens = sqliteTable("vaultbase_api_tokens", {
+export const apiTokens = sqliteTable("cogworks_api_tokens", {
   /** JWT jti — also the API-tokens primary key. */
   id: text("id").primaryKey(),
   /** Human-readable name shown in admin UI ("CI bot", "Claude Desktop"). */
@@ -121,7 +121,7 @@ export const apiTokens = sqliteTable("vaultbase_api_tokens", {
  * Saved SQL queries — the admin's "SQL runner" workspace. Per-admin
  * (private), no shared queries in v1. Populated via /admin/sql/queries.
  */
-export const sqlQueries = sqliteTable("vaultbase_sql_queries", {
+export const sqlQueries = sqliteTable("cogworks_sql_queries", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   sql: text("sql").notNull(),
@@ -142,7 +142,7 @@ export const sqlQueries = sqliteTable("vaultbase_sql_queries", {
 });
 
 /** JWT revocation list. Tokens carrying a `jti` listed here are rejected. */
-export const tokenRevocations = sqliteTable("vaultbase_token_revocations", {
+export const tokenRevocations = sqliteTable("cogworks_token_revocations", {
   jti: text("jti").primaryKey(),
   expires_at: integer("expires_at").notNull(),
   revoked_at: integer("revoked_at").notNull().default(sql`(unixepoch())`),
@@ -151,10 +151,10 @@ export const tokenRevocations = sqliteTable("vaultbase_token_revocations", {
 /**
  * Active admin sessions, written when a JWT is issued and trimmed when it
  * expires. Drives the **Settings → Security → Sessions** view + per-jti
- * revoke. Distinct from `vaultbase_token_revocations` (which only records
+ * revoke. Distinct from `cogworks_token_revocations` (which only records
  * negatives — this table records positives).
  */
-export const adminSessions = sqliteTable("vaultbase_admin_sessions", {
+export const adminSessions = sqliteTable("cogworks_admin_sessions", {
   jti: text("jti").primaryKey(),
   admin_id: text("admin_id").notNull(),
   admin_email: text("admin_email").notNull(),
@@ -169,7 +169,7 @@ export const adminSessions = sqliteTable("vaultbase_admin_sessions", {
  * Failed login attempts — used by the brute-force lockout machinery. One row
  * per attempt; trimmed when older than `auth.lockout.duration_seconds`.
  */
-export const loginFailures = sqliteTable("vaultbase_login_failures", {
+export const loginFailures = sqliteTable("cogworks_login_failures", {
   id: text("id").primaryKey(),
   /** "user:<email>" or "admin:<email>" or "ip:<ip>". */
   key: text("key").notNull(),
@@ -177,12 +177,12 @@ export const loginFailures = sqliteTable("vaultbase_login_failures", {
 });
 
 /** HMAC-keyed lookup for MFA recovery codes (no per-attempt argon2 fan-out). */
-export const mfaRecoveryLookup = sqliteTable("vaultbase_mfa_recovery_lookup", {
+export const mfaRecoveryLookup = sqliteTable("cogworks_mfa_recovery_lookup", {
   hmac: text("hmac").primaryKey(),
   recovery_id: text("recovery_id").notNull(),
 });
 
-export const mfaRecoveryCodes = sqliteTable("vaultbase_mfa_recovery_codes", {
+export const mfaRecoveryCodes = sqliteTable("cogworks_mfa_recovery_codes", {
   id: text("id").primaryKey(),
   user_id: text("user_id").notNull(),
   collection_id: text("collection_id").notNull(),
@@ -191,7 +191,7 @@ export const mfaRecoveryCodes = sqliteTable("vaultbase_mfa_recovery_codes", {
   created_at: integer("created_at").notNull().default(sql`(unixepoch())`),
 });
 
-export const oauthLinks = sqliteTable("vaultbase_oauth_links", {
+export const oauthLinks = sqliteTable("cogworks_oauth_links", {
   id: text("id").primaryKey(),
   user_id: text("user_id").notNull(),
   collection_id: text("collection_id").notNull(),
@@ -201,7 +201,7 @@ export const oauthLinks = sqliteTable("vaultbase_oauth_links", {
   created_at: integer("created_at").notNull().default(sql`(unixepoch())`),
 });
 
-export const admin = sqliteTable("vaultbase_admin", {
+export const admin = sqliteTable("cogworks_admin", {
   id: text("id").primaryKey(),
   email: text("email").notNull(),
   password_hash: text("password_hash").notNull(),
@@ -213,7 +213,7 @@ export const admin = sqliteTable("vaultbase_admin", {
   created_at: integer("created_at").notNull().default(sql`(unixepoch())`),
 });
 
-export const files = sqliteTable("vaultbase_files", {
+export const files = sqliteTable("cogworks_files", {
   id: text("id").primaryKey(),
   collection_id: text("collection_id").notNull(),
   record_id: text("record_id").notNull(),
@@ -225,7 +225,7 @@ export const files = sqliteTable("vaultbase_files", {
   created_at: integer("created_at").notNull().default(sql`(unixepoch())`),
 });
 
-export const hooks = sqliteTable("vaultbase_hooks", {
+export const hooks = sqliteTable("cogworks_hooks", {
   id: text("id").primaryKey(),
   name: text("name").notNull().default(""),
   collection_name: text("collection_name").notNull().default(""),
@@ -236,7 +236,7 @@ export const hooks = sqliteTable("vaultbase_hooks", {
   updated_at: integer("updated_at").notNull().default(sql`(unixepoch())`),
 });
 
-export const routes = sqliteTable("vaultbase_routes", {
+export const routes = sqliteTable("cogworks_routes", {
   id: text("id").primaryKey(),
   name: text("name").notNull().default(""),
   method: text("method").notNull(),
@@ -247,7 +247,7 @@ export const routes = sqliteTable("vaultbase_routes", {
   updated_at: integer("updated_at").notNull().default(sql`(unixepoch())`),
 });
 
-export const jobs = sqliteTable("vaultbase_jobs", {
+export const jobs = sqliteTable("cogworks_jobs", {
   id: text("id").primaryKey(),
   name: text("name").notNull().default(""),
   cron: text("cron").notNull(),
@@ -272,7 +272,7 @@ export const jobs = sqliteTable("vaultbase_jobs", {
  * from a named queue and processes them. Multiple workers can share a
  * queue (concurrency adds across workers).
  */
-export const workers = sqliteTable("vaultbase_workers", {
+export const workers = sqliteTable("cogworks_workers", {
   id: text("id").primaryKey(),
   name: text("name").notNull().default(""),
   queue: text("queue").notNull(),
@@ -296,7 +296,7 @@ export const workers = sqliteTable("vaultbase_workers", {
  * in-memory (Phase 1) or Redis (future Phase 2); this table is the
  * audit trail and admin dashboard data source.
  */
-export const jobsLog = sqliteTable("vaultbase_jobs_log", {
+export const jobsLog = sqliteTable("cogworks_jobs_log", {
   id: text("id").primaryKey(),
   queue: text("queue").notNull(),
   worker_id: text("worker_id"),
@@ -314,7 +314,7 @@ export const jobsLog = sqliteTable("vaultbase_jobs_log", {
   finished_at: integer("finished_at"),
 });
 
-export const settings = sqliteTable("vaultbase_settings", {
+export const settings = sqliteTable("cogworks_settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
   updated_at: integer("updated_at").notNull().default(sql`(unixepoch())`),
@@ -329,7 +329,7 @@ export const settings = sqliteTable("vaultbase_settings", {
  * trail; debugging value: "which admin deleted that collection three days
  * ago" lookups go from hard to one query.
  */
-export const auditLog = sqliteTable("vaultbase_audit_log", {
+export const auditLog = sqliteTable("cogworks_audit_log", {
   id: text("id").primaryKey(),
   /** Admin id from the JWT — null only on unauthenticated paths (rare for /admin). */
   actor_id: text("actor_id"),
@@ -357,7 +357,7 @@ export const auditLog = sqliteTable("vaultbase_audit_log", {
  * blobs evaluated by `core/flags.ts`. The `default_value` is also a JSON-
  * encoded scalar so a single column carries bool/string/number/json types.
  */
-export const featureFlags = sqliteTable("vaultbase_feature_flags", {
+export const featureFlags = sqliteTable("cogworks_feature_flags", {
   key: text("key").primaryKey(),
   description: text("description").notNull().default(""),
   /** "bool" | "string" | "number" | "json" */
@@ -382,9 +382,9 @@ export const featureFlags = sqliteTable("vaultbase_feature_flags", {
 /**
  * Outbound webhooks — fire on record events + custom dispatch from hooks.
  * One row per registered subscription. Deliveries live in
- * `vaultbase_webhook_deliveries` for retry + audit.
+ * `cogworks_webhook_deliveries` for retry + audit.
  */
-export const webhooks = sqliteTable("vaultbase_webhooks", {
+export const webhooks = sqliteTable("cogworks_webhooks", {
   id: text("id").primaryKey(),
   name: text("name").notNull().default(""),
   url: text("url").notNull(),
@@ -409,7 +409,7 @@ export const webhooks = sqliteTable("vaultbase_webhooks", {
  * → dead. The dispatcher claims next-due `pending` rows. Older entries
  * can be GCed by hand when storage gets tight.
  */
-export const webhookDeliveries = sqliteTable("vaultbase_webhook_deliveries", {
+export const webhookDeliveries = sqliteTable("cogworks_webhook_deliveries", {
   id: text("id").primaryKey(),
   webhook_id: text("webhook_id").notNull(),
   event: text("event").notNull(),
@@ -427,7 +427,7 @@ export const webhookDeliveries = sqliteTable("vaultbase_webhook_deliveries", {
   created_at: integer("created_at").notNull().default(sql`(unixepoch())`),
 });
 
-export const flagSegments = sqliteTable("vaultbase_flag_segments", {
+export const flagSegments = sqliteTable("cogworks_flag_segments", {
   name: text("name").primaryKey(),
   description: text("description").notNull().default(""),
   /** JSON: same Condition tree as rule.when. */

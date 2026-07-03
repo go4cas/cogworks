@@ -3,7 +3,7 @@
  * SPA can inject them as inline `:root { --accent: ... }` at boot — even
  * before the user is signed in (login page picks them up too).
  *
- * Public on purpose: theme is presentation-only. Stored in `vaultbase_settings`
+ * Public on purpose: theme is presentation-only. Stored in `cogworks_settings`
  * under `theme.<var>` keys; missing = use SPA default. Saving lives behind
  * admin auth via the regular `PATCH /api/v1/admin/settings`.
  */

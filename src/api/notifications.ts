@@ -301,7 +301,7 @@ export function makeNotificationsPlugin(jwtSecret: string) {
             // `token` UNIQUE so this conflict resolution works.
             client
               .prepare(
-                `INSERT INTO vb_device_tokens (id, user, provider, token, platform, app_version, enabled, last_seen, created_at)
+                `INSERT INTO cw_device_tokens (id, user, provider, token, platform, app_version, enabled, last_seen, created_at)
              VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
              ON CONFLICT(token) DO UPDATE SET
                user = excluded.user,
@@ -327,7 +327,7 @@ export function makeNotificationsPlugin(jwtSecret: string) {
               return c.json(
                 {
                   error:
-                    "Notifications not enabled (vb_device_tokens missing — admin must enable a token-based provider)",
+                    "Notifications not enabled (cw_device_tokens missing — admin must enable a token-based provider)",
                   code: 503,
                 },
                 503,
@@ -349,7 +349,7 @@ export function makeNotificationsPlugin(jwtSecret: string) {
           // Soft delete (enabled=0) — preserves the row so we can analytics-on-it.
           // Restrict to the calling user's own tokens (defense against ID forgery).
           client
-            .prepare(`UPDATE vb_device_tokens SET enabled = 0 WHERE token = ? AND user = ?`)
+            .prepare(`UPDATE cw_device_tokens SET enabled = 0 WHERE token = ? AND user = ?`)
             .run(c.req.param("token"), user.id);
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);

@@ -46,7 +46,7 @@ async function seedAdmin(email = "admin@x.test"): Promise<{ id: string; token: s
     });
   const token = await new jose.SignJWT({ id, email })
     .setProtectedHeader({ alg: "HS256" })
-    .setIssuer("vaultbase")
+    .setIssuer("cogworks")
     .setAudience("admin")
     .setIssuedAt()
     .setExpirationTime("1h")
@@ -74,7 +74,7 @@ async function seedUserToken(userId?: string): Promise<{ id: string; token: stri
   void collectionId;
   // Idempotent — second call with the same id is a no-op.
   const existing = (getDb() as unknown as { $client: import("bun:sqlite").Database }).$client
-    .prepare(`SELECT id FROM vb_users WHERE id = ?`)
+    .prepare(`SELECT id FROM cw_users WHERE id = ?`)
     .get(id);
   if (!existing) {
     const { insertUser } = await import("../core/users-table.ts");
@@ -89,7 +89,7 @@ async function seedUserToken(userId?: string): Promise<{ id: string; token: stri
   }
   const token = await new jose.SignJWT({ id, email, collection: "users" })
     .setProtectedHeader({ alg: "HS256" })
-    .setIssuer("vaultbase")
+    .setIssuer("cogworks")
     .setAudience("user")
     .setIssuedAt()
     .setExpirationTime("1h")
@@ -361,7 +361,7 @@ describe("POST notifications/devices", () => {
   beforeEach(() => {
     const client = (getDb() as unknown as { $client: import("bun:sqlite").Database }).$client;
     client.exec(`
-      CREATE TABLE vb_device_tokens (
+      CREATE TABLE cw_device_tokens (
         id TEXT PRIMARY KEY, user TEXT NOT NULL, provider TEXT NOT NULL,
         token TEXT NOT NULL UNIQUE, platform TEXT NOT NULL, app_version TEXT,
         enabled INTEGER NOT NULL DEFAULT 1, last_seen INTEGER NOT NULL, created_at INTEGER NOT NULL
@@ -383,7 +383,7 @@ describe("POST notifications/devices", () => {
 
     const client = (getDb() as unknown as { $client: import("bun:sqlite").Database }).$client;
     const row = client
-      .prepare(`SELECT * FROM vb_device_tokens WHERE token=?`)
+      .prepare(`SELECT * FROM cw_device_tokens WHERE token=?`)
       .get("fcm-token-1") as any;
     expect(row.user).toBe(user.id);
     expect(row.provider).toBe("fcm");
@@ -416,7 +416,7 @@ describe("POST notifications/devices", () => {
 
     const client = (getDb() as unknown as { $client: import("bun:sqlite").Database }).$client;
     const row = client
-      .prepare(`SELECT * FROM vb_device_tokens WHERE token=?`)
+      .prepare(`SELECT * FROM cw_device_tokens WHERE token=?`)
       .get("shared-device") as any;
     expect(row.user).toBe("user-b");
     expect(row.enabled).toBe(1);
@@ -435,9 +435,9 @@ describe("POST notifications/devices", () => {
     expect(res.status).toBe(422);
   });
 
-  it("503 when vb_device_tokens is missing (notifications not bootstrapped)", async () => {
+  it("503 when cw_device_tokens is missing (notifications not bootstrapped)", async () => {
     const client = (getDb() as unknown as { $client: import("bun:sqlite").Database }).$client;
-    client.exec(`DROP TABLE vb_device_tokens`);
+    client.exec(`DROP TABLE cw_device_tokens`);
     const user = await seedUserToken();
     const app = makeNotificationsPlugin(JWT_SECRET);
     const res = await app.request(
@@ -457,7 +457,7 @@ describe("DELETE notifications/devices/:token", () => {
   beforeEach(() => {
     const client = (getDb() as unknown as { $client: import("bun:sqlite").Database }).$client;
     client.exec(`
-      CREATE TABLE vb_device_tokens (
+      CREATE TABLE cw_device_tokens (
         id TEXT PRIMARY KEY, user TEXT NOT NULL, provider TEXT NOT NULL,
         token TEXT NOT NULL UNIQUE, platform TEXT NOT NULL, app_version TEXT,
         enabled INTEGER NOT NULL DEFAULT 1, last_seen INTEGER NOT NULL, created_at INTEGER NOT NULL
@@ -471,12 +471,12 @@ describe("DELETE notifications/devices/:token", () => {
     const now = Math.floor(Date.now() / 1000);
     client
       .prepare(
-        `INSERT INTO vb_device_tokens (id, user, provider, token, platform, enabled, last_seen, created_at) VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+        `INSERT INTO cw_device_tokens (id, user, provider, token, platform, enabled, last_seen, created_at) VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
       )
       .run("a", "user-a", "fcm", "tok-a", "ios", now, now);
     client
       .prepare(
-        `INSERT INTO vb_device_tokens (id, user, provider, token, platform, enabled, last_seen, created_at) VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+        `INSERT INTO cw_device_tokens (id, user, provider, token, platform, enabled, last_seen, created_at) VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
       )
       .run("b", "user-b", "fcm", "tok-b", "ios", now, now);
 
@@ -485,14 +485,14 @@ describe("DELETE notifications/devices/:token", () => {
     await app.request(adminReq("DELETE", `/notifications/devices/tok-b`, user.token));
     // user-b's token is untouched
     const rowB = client
-      .prepare(`SELECT enabled FROM vb_device_tokens WHERE token=?`)
+      .prepare(`SELECT enabled FROM cw_device_tokens WHERE token=?`)
       .get("tok-b") as { enabled: number };
     expect(rowB.enabled).toBe(1);
 
     // user-b deletes their own token — works
     await app.request(adminReq("DELETE", `/notifications/devices/tok-b`, other.token));
     const rowB2 = client
-      .prepare(`SELECT enabled FROM vb_device_tokens WHERE token=?`)
+      .prepare(`SELECT enabled FROM cw_device_tokens WHERE token=?`)
       .get("tok-b") as { enabled: number };
     expect(rowB2.enabled).toBe(0);
   });

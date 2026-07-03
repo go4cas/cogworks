@@ -116,7 +116,7 @@ describe("runSql — read-only mode", () => {
 
   it("blocks INSERT/UPDATE/DELETE before reaching SQLite", async () => {
     const res = await runSql({
-      sql: "INSERT INTO vaultbase_admin (id) VALUES ('x')",
+      sql: "INSERT INTO cogworks_admin (id) VALUES ('x')",
       mode: "readonly",
       dbPath,
     });
@@ -182,7 +182,7 @@ describe("runSql — sandbox mode", () => {
 
     // Sandbox: drop the admin table.
     const drop = await runSql({
-      sql: "DROP TABLE vaultbase_admin",
+      sql: "DROP TABLE cogworks_admin",
       mode: "sandbox",
       dbPath,
       adminId: me.id,
@@ -193,7 +193,7 @@ describe("runSql — sandbox mode", () => {
     // Live DB still has it.
     const live = new Database(dbPath, { readonly: true, create: false });
     try {
-      const r = live.prepare("SELECT count(*) AS n FROM vaultbase_admin").get() as { n: number };
+      const r = live.prepare("SELECT count(*) AS n FROM cogworks_admin").get() as { n: number };
       expect(r.n).toBeGreaterThanOrEqual(1);
     } finally {
       live.close();
@@ -205,7 +205,7 @@ describe("runSql — sandbox mode", () => {
     resetSandbox(me.id, dbPath);
 
     const ins = await runSql({
-      sql: `INSERT INTO vaultbase_admin (id, email, password_hash, password_reset_at, created_at)
+      sql: `INSERT INTO cogworks_admin (id, email, password_hash, password_reset_at, created_at)
             VALUES ('zzz', 'sandbox@x', 'h', 0, 0)`,
       mode: "sandbox",
       dbPath,
@@ -215,7 +215,7 @@ describe("runSql — sandbox mode", () => {
     expect(ins.changes).toBe(1);
 
     const sel = await runSql({
-      sql: "SELECT id FROM vaultbase_admin WHERE id = 'zzz'",
+      sql: "SELECT id FROM cogworks_admin WHERE id = 'zzz'",
       mode: "sandbox",
       dbPath,
       adminId: me.id,
@@ -267,7 +267,7 @@ describe("saved queries — CRUD", () => {
 
     await createSavedQuery({
       name: "all admins",
-      sql: "SELECT * FROM vaultbase_admin",
+      sql: "SELECT * FROM cogworks_admin",
       ownerAdminId: a1.id,
       ownerAdminEmail: a1.email,
     });
@@ -393,7 +393,7 @@ describe("/admin/sql/schema endpoint", () => {
       `CREATE TABLE _test_widgets (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
-      owner TEXT REFERENCES vaultbase_admin(id)
+      owner TEXT REFERENCES cogworks_admin(id)
     )` as never,
     );
     getDb().run("CREATE INDEX idx_widgets_name ON _test_widgets(name)" as never);
@@ -433,10 +433,10 @@ describe("/admin/sql/schema endpoint", () => {
     expect(nameCol?.indexed).toBe(true);
     expect(widgets!.indexes.some((i) => i.name === "idx_widgets_name")).toBe(true);
     expect(
-      widgets!.foreignKeys.some((f) => f.col === "owner" && f.refTable === "vaultbase_admin"),
+      widgets!.foreignKeys.some((f) => f.col === "owner" && f.refTable === "cogworks_admin"),
     ).toBe(true);
 
-    const adminTable = body.data.tables.find((t) => t.name === "vaultbase_admin");
+    const adminTable = body.data.tables.find((t) => t.name === "cogworks_admin");
     expect(adminTable?.kind).toBe("system");
   });
 });

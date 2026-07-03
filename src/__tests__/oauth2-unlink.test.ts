@@ -63,7 +63,7 @@ async function userJwt(userId: string, collectionName: string): Promise<string> 
     collection: collectionName,
   })
     .setProtectedHeader({ alg: "HS256" })
-    .setIssuer("vaultbase")
+    .setIssuer("cogworks")
     .setAudience("user")
     .setIssuedAt(Math.floor(Date.now() / 1000))
     .setExpirationTime("1h")

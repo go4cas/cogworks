@@ -124,11 +124,11 @@ describe("snapshot shape", () => {
     await createCollection({
       name: "post_titles",
       type: "view",
-      view_query: "SELECT id, title FROM vb_posts",
+      view_query: "SELECT id, title FROM cw_posts",
     });
     const snap = await buildSnapshot();
     const view = snap.find((c) => c.name === "post_titles")!;
-    expect(view.view_query).toBe("SELECT id, title FROM vb_posts");
+    expect(view.view_query).toBe("SELECT id, title FROM cw_posts");
   });
 });
 

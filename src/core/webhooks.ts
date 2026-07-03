@@ -3,7 +3,7 @@
  *
  * Wired into record CRUD via `dispatchEvent("posts.create", { record })`.
  * Each enabled webhook subscribed to that event gets a row in
- * `vaultbase_webhook_deliveries` (status=pending). A periodic tick claims
+ * `cogworks_webhook_deliveries` (status=pending). A periodic tick claims
  * due deliveries, POSTs them with HMAC-SHA-256 signing, and either marks
  * them succeeded or schedules a retry per the webhook's backoff policy.
  *

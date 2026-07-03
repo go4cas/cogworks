@@ -98,13 +98,13 @@ export function resetSandbox(adminId: string, livePath: string): SandboxInfo {
   db.exec("PRAGMA busy_timeout = 1000;");
 
   const escapedPath = livePath.split("\\").join("/").replace(/'/g, "''");
-  db.exec(`ATTACH DATABASE '${escapedPath}' AS _vb_live`);
+  db.exec(`ATTACH DATABASE '${escapedPath}' AS _cw_live`);
   let approxSize = 0;
   try {
     // Order matters — tables before indexes/views/triggers reference them.
     const objs = db
       .prepare(
-        `SELECT type, name, sql FROM _vb_live.sqlite_master
+        `SELECT type, name, sql FROM _cw_live.sqlite_master
        WHERE name NOT LIKE 'sqlite_%' AND sql IS NOT NULL`,
       )
       .all() as Array<{ type: string; name: string; sql: string }>;
@@ -118,7 +118,7 @@ export function resetSandbox(adminId: string, livePath: string): SandboxInfo {
           // could conceivably have such names; the upstream `assertSqlIdent`
           // path can't (rejects quote chars), so this is defense-in-depth.
           const ident = quoteIdent(obj.name);
-          db.exec(`INSERT INTO main.${ident} SELECT * FROM _vb_live.${ident}`);
+          db.exec(`INSERT INTO main.${ident} SELECT * FROM _cw_live.${ident}`);
         }
       } catch {
         /* skip objects that fail to recreate (rare, e.g. virtual tables) */
@@ -130,7 +130,7 @@ export function resetSandbox(adminId: string, livePath: string): SandboxInfo {
     const ps = db.prepare("PRAGMA page_size").get() as { page_size?: number };
     approxSize = (pc?.page_count ?? 0) * (ps?.page_size ?? 0);
   } finally {
-    db.exec("DETACH DATABASE _vb_live");
+    db.exec("DETACH DATABASE _cw_live");
   }
 
   const now = Math.floor(Date.now() / 1000);

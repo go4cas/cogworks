@@ -29,17 +29,17 @@ describe("helpers.security.jwtSign / jwtVerify — algorithm support", () => {
     const token = await sec.jwtSign({ sub: "rs-user", iat_for: "fcm" }, privPem, {
       algorithm: "RS256",
       expiresIn: 3600,
-      issuer: "vaultbase",
+      issuer: "cogworks",
       audience: "https://oauth2.googleapis.com/token",
     });
     const claims = await sec.jwtVerify(token, pubPem, {
       algorithm: "RS256",
-      issuer: "vaultbase",
+      issuer: "cogworks",
       audience: "https://oauth2.googleapis.com/token",
     });
     expect(claims.sub).toBe("rs-user");
     expect(claims.iat_for).toBe("fcm");
-    expect(claims.iss).toBe("vaultbase");
+    expect(claims.iss).toBe("cogworks");
   });
 
   it("ES256 round-trips (VAPID / APNs use case)", async () => {

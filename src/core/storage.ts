@@ -22,7 +22,7 @@ function safeLocalPath(uploadDir: string, key: string): string {
  *   - "s3":    AWS S3 / Cloudflare R2 / any S3-compatible service via Bun's
  *             native Bun.S3Client (no SDK needed)
  *
- * Driver + credentials live in `vaultbase_settings`. Cached for 30s and
+ * Driver + credentials live in `cogworks_settings`. Cached for 30s and
  * invalidated on settings PATCH (see api/settings.ts).
  *
  * Local mode keeps full backwards-compat: the same `<uploadDir>/<filename>`

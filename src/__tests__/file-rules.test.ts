@@ -67,7 +67,7 @@ async function signAdmin(id: string): Promise<string> {
   }
   return await new jose.SignJWT({ id, email: "admin@test.local" })
     .setProtectedHeader({ alg: "HS256" })
-    .setIssuer("vaultbase")
+    .setIssuer("cogworks")
     .setAudience("admin")
     .setIssuedAt(now)
     .setExpirationTime("1h")
@@ -288,7 +288,7 @@ describe("file bindTokenIp", () => {
 
     const forged = await new jose.SignJWT({ filename, ip: "9.9.9.9" })
       .setProtectedHeader({ alg: "HS256" })
-      .setIssuer("vaultbase")
+      .setIssuer("cogworks")
       .setAudience("file")
       .setIssuedAt(Math.floor(Date.now() / 1000))
       .setExpirationTime("1h")
@@ -311,7 +311,7 @@ describe("file bindTokenIp", () => {
     // Forge a token whose ip claim matches the test runtime's client IP.
     const forged = await new jose.SignJWT({ filename, ip: "unknown" })
       .setProtectedHeader({ alg: "HS256" })
-      .setIssuer("vaultbase")
+      .setIssuer("cogworks")
       .setAudience("file")
       .setIssuedAt(Math.floor(Date.now() / 1000))
       .setExpirationTime("1h")

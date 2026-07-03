@@ -28,7 +28,7 @@ describe("helpers.notify", () => {
   it("enqueues to all enabled providers and inserts inbox when table exists", async () => {
     const client = (getDb() as unknown as { $client: import("bun:sqlite").Database }).$client;
     client.exec(`
-      CREATE TABLE vb_notifications (
+      CREATE TABLE cw_notifications (
         id TEXT PRIMARY KEY, user TEXT NOT NULL, type TEXT, title TEXT, body TEXT,
         data TEXT, created_at INTEGER NOT NULL DEFAULT (unixepoch())
       )`);
@@ -46,7 +46,7 @@ describe("helpers.notify", () => {
     expect(result.enqueued[0]!.deduped).toBe(false);
 
     const row = client
-      .prepare(`SELECT * FROM vb_notifications WHERE id = ?`)
+      .prepare(`SELECT * FROM cw_notifications WHERE id = ?`)
       .get(result.inboxRowId) as {
       title: string;
       user: string;
@@ -60,7 +60,7 @@ describe("helpers.notify", () => {
   it("opts.inbox=false skips inbox row even when table exists", async () => {
     const client = (getDb() as unknown as { $client: import("bun:sqlite").Database }).$client;
     client.exec(`
-      CREATE TABLE vb_notifications (
+      CREATE TABLE cw_notifications (
         id TEXT PRIMARY KEY, user TEXT NOT NULL, type TEXT, title TEXT, body TEXT,
         data TEXT, created_at INTEGER NOT NULL DEFAULT (unixepoch())
       )`);

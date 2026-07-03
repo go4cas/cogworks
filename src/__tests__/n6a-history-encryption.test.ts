@@ -5,7 +5,7 @@
  *
  * On read (listRecordHistory / getHistoryAt), the values should round-trip
  * back to plaintext for the API consumer — so end-to-end the API still
- * shows the right value, but a DB-level inspection of `vaultbase_record_history`
+ * shows the right value, but a DB-level inspection of `cogworks_record_history`
  * confirms the data is encrypted at rest.
  */
 import { describe, expect, it, beforeEach, afterEach } from "bun:test";
@@ -41,7 +41,7 @@ async function withHistoryAndEncryption() {
 }
 
 describe("N-6a: encrypted-field values are encrypted at rest in history rows", () => {
-  it("persists encrypted ciphertext in vaultbase_record_history.snapshot", async () => {
+  it("persists encrypted ciphertext in cogworks_record_history.snapshot", async () => {
     await withHistoryAndEncryption();
     const r = await createRecord("notes", { title: "hi", secret: "very-private" }, null);
 

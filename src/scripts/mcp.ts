@@ -71,8 +71,8 @@ or %APPDATA%\\Claude\\claude_desktop_config.json):
 
   {
     "mcpServers": {
-      "vaultbase": {
-        "command": "vaultbase",
+      "cogworks": {
+        "command": "cogworks",
         "args": ["mcp"],
         "env": { "VAULTBASE_MCP_TOKEN": "vbat_…" }
       }

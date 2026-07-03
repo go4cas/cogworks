@@ -1,6 +1,6 @@
 /**
  * Cross-worker realtime fan-out over a shared SQLite table
- * (`vaultbase_realtime_events`). Active ONLY under `vaultbase cluster`
+ * (`cogworks_realtime_events`). Active ONLY under `vaultbase cluster`
  * (VAULTBASE_WORKER_ID set) — single-process deployments never read or write
  * the table, so this whole module is a set of no-ops there.
  *
@@ -26,7 +26,7 @@ function publish(kind: "record" | "system", payload: string): void {
   try {
     if (!insertStmt) {
       insertStmt = getRawClient().prepare(
-        `INSERT INTO vaultbase_realtime_events (kind, payload, origin, created_at)
+        `INSERT INTO cogworks_realtime_events (kind, payload, origin, created_at)
          VALUES (?, ?, ?, unixepoch())`,
       );
     }
@@ -65,14 +65,14 @@ export function startRealtimeTail(handlers: TailHandlers): void {
   // A respawned worker must not replay history — start after the current max.
   try {
     const row = db
-      .prepare(`SELECT COALESCE(MAX(seq), 0) AS m FROM vaultbase_realtime_events`)
+      .prepare(`SELECT COALESCE(MAX(seq), 0) AS m FROM cogworks_realtime_events`)
       .get() as { m: number } | undefined;
     lastSeq = row?.m ?? 0;
   } catch {
     lastSeq = 0;
   }
   const sel = db.prepare(
-    `SELECT seq, kind, payload FROM vaultbase_realtime_events
+    `SELECT seq, kind, payload FROM cogworks_realtime_events
      WHERE seq > ? AND origin <> ? ORDER BY seq LIMIT 500`,
   );
   tailTimer = setInterval(() => {
@@ -114,7 +114,7 @@ export function pruneRealtimeEvents(retentionSec = 30): number {
   if (WORKER_ID === null) return 0;
   try {
     const res = getRawClient()
-      .prepare(`DELETE FROM vaultbase_realtime_events WHERE created_at < unixepoch() - ?`)
+      .prepare(`DELETE FROM cogworks_realtime_events WHERE created_at < unixepoch() - ?`)
       .run(retentionSec);
     return (res as unknown as { changes?: number }).changes ?? 0;
   } catch {

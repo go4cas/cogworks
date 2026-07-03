@@ -246,7 +246,7 @@ Server flags:
   --version, -v                   Print version.
 
 Environment:
-  VAULTBASE_DATA_DIR              Data directory (default: ./vaultbase_data)
+  VAULTBASE_DATA_DIR              Data directory (default: ./cogworks_data)
   VAULTBASE_PORT                  HTTP port (default: 8090)
   VAULTBASE_HOST                  Bind host (default: 0.0.0.0)
   VAULTBASE_JWT_SECRET            JWT signing secret (default: read from <dataDir>/.secret)
