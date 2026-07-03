@@ -11,6 +11,7 @@ import {
   ReadOnlyCollectionError,
   RestrictError,
   updateRecord,
+  vectorSearch,
 } from "../core/records.ts";
 import { ValidationError } from "../core/validate.ts";
 import { runWithHookRequest } from "../core/hooks.ts";
@@ -21,7 +22,7 @@ import {
   type HistoryListResponse,
 } from "../core/record-history.ts";
 import { parseFields } from "../core/collections.ts";
-import { parseVectorParam, topK, VectorParseError } from "../core/vector.ts";
+import { parseVectorParam, VectorParseError } from "../core/vector.ts";
 import { timeFor } from "../core/perf-metrics.ts";
 
 function readOnlyResponse(c: Context, err: ReadOnlyCollectionError) {
@@ -155,12 +156,10 @@ export function makeRecordsPlugin(jwtSecret: string) {
         }
 
         // ── Vector similarity search ───────────────────────────────────────
-        // When `nearVector` + `nearVectorField` are present, fetch a filtered
-        // candidate set (with `filter` / list_rule still applied so we never
-        // rank rows the caller can't see) and re-order by cosine similarity.
-        // The caller paginates the *ranked* page in-process, so we pull a
-        // larger working set and slice — this is fine up to ~50K candidates;
-        // beyond that, switch to sqlite-vec.
+        // `nearVector` + `nearVectorField` → cosine KNN, ranked in-process under
+        // the same filter / list_rule scope (never ranks rows the caller can't
+        // see). See core `vectorSearch`: a lean id+vector scan with a cached
+        // parse, no silent candidate cap, and full records built only for top-K.
         if (nearVector && nearVectorField) {
           const fieldDefs = parseFields(col.fields);
           const vecField = fieldDefs.find((f) => f.name === nearVectorField && f.type === "vector");
@@ -193,55 +192,28 @@ export function makeRecordsPlugin(jwtSecret: string) {
             );
           }
 
-          // Pull a working window. We can't ORDER BY similarity in SQL (yet),
-          // so the safe approach is to fetch up to MAX_CANDIDATES rows under
-          // the existing access scope and rank in-process.
-          const MAX_CANDIDATES = 10_000;
-          const candidatePage = await listRecords(collection, {
-            ...opts,
-            page: 1,
-            perPage: MAX_CANDIDATES,
-            skipTotal: true,
-          });
-
-          const candidates = candidatePage.data
-            .map((r) => {
-              const v = r[nearVectorField];
-              return Array.isArray(v)
-                ? { id: r.id as string, vector: v as number[], record: r }
-                : null;
-            })
-            .filter(
-              (
-                x,
-              ): x is {
-                id: string;
-                vector: number[];
-                record: (typeof candidatePage.data)[number];
-              } => x !== null,
-            );
-
+          // Lean two-phase KNN (see core `vectorSearch`): scans id+vector under
+          // the same filter/access scope with a cached parse (no silent 10K cap
+          // — bounded by `vector.max_candidates`, `truncated` signals when hit),
+          // then materializes only the top-K.
           const limit = nearLimit ? Math.max(1, Math.min(1000, parseInt(nearLimit, 10))) : 10;
-          const ranked = topK({
-            query: queryVec,
-            candidates: candidates.map((cand) => ({ id: cand.id, vector: cand.vector })),
-            limit,
-            ...(nearMinScore ? { minScore: parseFloat(nearMinScore) } : {}),
-          });
-          const byId = new Map(candidates.map((cand) => [cand.id, cand.record]));
-          const data = ranked
-            .map((mtch) => {
-              const rec = byId.get(mtch.id);
-              if (!rec) return null;
-              return { ...rec, _score: mtch.score };
-            })
-            .filter(Boolean);
+          const { data, scanned, truncated } = await vectorSearch(
+            collection,
+            nearVectorField,
+            queryVec,
+            {
+              ...opts,
+              limit,
+              ...(nearMinScore ? { minScore: parseFloat(nearMinScore) } : {}),
+            },
+          );
           return c.json({
             data,
             page: 1,
             perPage: data.length,
             totalItems: data.length,
             totalPages: 1,
+            _vector: { scanned, truncated },
           });
         }
 
