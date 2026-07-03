@@ -480,6 +480,26 @@ function applySchema(client: Database): void {
     `CREATE INDEX IF NOT EXISTS idx_vaultbase_sql_queries_owner ON vaultbase_sql_queries(owner_admin_id, updated_at DESC)`,
   );
 
+  // ── Cross-worker realtime bus (cluster mode only) ─────────────────────────
+  // Under `vaultbase cluster`, workers are separate processes with no shared
+  // memory. A record/system broadcast delivers to the originating worker's own
+  // WS/SSE subscribers AND appends the event here; every worker tails this
+  // table (seq > lastSeen) and re-delivers to its local subscribers. Rows are
+  // ephemeral — pruned by the leader shortly after. In single-process mode the
+  // table is never written to or read.
+  client.exec(`
+    CREATE TABLE IF NOT EXISTS vaultbase_realtime_events (
+      seq INTEGER PRIMARY KEY AUTOINCREMENT,
+      kind TEXT NOT NULL,
+      payload TEXT NOT NULL,
+      origin TEXT,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch())
+    )
+  `);
+  client.exec(
+    `CREATE INDEX IF NOT EXISTS idx_vaultbase_realtime_events_created_at ON vaultbase_realtime_events(created_at)`,
+  );
+
   // ── v0.11: auth users moved to per-collection `vb_<auth-col>` tables ──
   //
   // Old model: every auth user lived in shared `vaultbase_users` keyed by

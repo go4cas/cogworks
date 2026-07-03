@@ -62,8 +62,13 @@ import {
   getSSEClient,
   setSSESubscriptions,
   unregisterSSEClient,
+  deliverRecordLocal,
+  deliverSystemLocal,
   type WSAuth,
+  type RealtimeEvent,
+  type BroadcastOpts,
 } from "./realtime/manager.ts";
+import { startRealtimeTail, pruneRealtimeEvents } from "./realtime/cluster-bus.ts";
 import { openSSEStream } from "./realtime/sse.ts";
 
 interface ClientMessage {
@@ -174,6 +179,14 @@ export function createServer(config: Config) {
   // drains a PER-WORKER in-memory buffer, so it must run in every worker.
   startQueueScheduler();
   startApiTokenUsageFlusher();
+  // Cross-worker realtime bus: every worker tails the shared event table so a
+  // record written on a sibling worker reaches this worker's WS/SSE subscribers.
+  // No-op in single-process mode (self-gated on VAULTBASE_WORKER_ID).
+  startRealtimeTail({
+    onRecord: (collection, event, opts) =>
+      deliverRecordLocal(collection, event as RealtimeEvent, opts as BroadcastOpts | undefined),
+    onSystem: (topic, message) => deliverSystemLocal(topic, message as object),
+  });
   // Sweep idle SQL sandboxes hourly. `_sandboxes` is a PER-WORKER in-memory map
   // of open bun:sqlite handles, so every worker must prune its own or it leaks
   // connections (not a shared-DB op — must NOT be leader-gated).
@@ -201,6 +214,12 @@ export function createServer(config: Config) {
     startUpdateCheckScheduler();
     startWebhookDispatcher();
     startFileTokenUsesPrune();
+    // Prune consumed cross-worker realtime events (no-op in single-process).
+    // Retention comfortably exceeds the tail poll interval, so no worker misses
+    // an event it hasn't yet read.
+    setInterval(() => {
+      pruneRealtimeEvents();
+    }, 30_000).unref?.();
     // Prune expired/long-revoked API token rows once a day.
     setTimeout(
       () => {
