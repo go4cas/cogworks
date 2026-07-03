@@ -1,5 +1,6 @@
 import type { RecordWithMeta } from "../core/records.ts";
 import { evaluateRule, type AuthContext } from "../core/rules.ts";
+import { publishRecord, publishSystem } from "./cluster-bus.ts";
 
 export interface WSLike {
   send(data: string): void;
@@ -179,13 +180,30 @@ function shouldSendTo(id: string, opts?: BroadcastOpts): boolean {
 }
 
 /**
- * Send to subscribers of `<collection>`, `<collection>/<id>` (when the event has
- * a record id), and the wildcard `*` topic — fans out with per-id dedup. When
- * the caller passes `opts.viewRule` (and `opts.record` for the eval target),
- * each subscriber's auth is checked against the rule and non-matching connections
- * are skipped silently.
+ * Broadcast a record event: deliver to THIS worker's local subscribers and,
+ * under cluster mode, publish it so sibling workers deliver to theirs too.
+ * `opts.viewRule`/`opts.record` are JSON-serializable, so cross-worker delivery
+ * still filters per-subscriber on each worker.
  */
 export function broadcast(collection: string, event: RealtimeEvent, opts?: BroadcastOpts): void {
+  deliverRecordLocal(collection, event, opts);
+  // No-op in single-process mode.
+  publishRecord(collection, event, opts);
+}
+
+/**
+ * Deliver a record event to subscribers ON THIS WORKER ONLY. Sends to
+ * subscribers of `<collection>`, `<collection>/<id>` (when the event has a
+ * record id), and the wildcard `*` topic — fans out with per-id dedup. When the
+ * caller passes `opts.viewRule` (and `opts.record` for the eval target), each
+ * subscriber's auth is checked against the rule and non-matching connections are
+ * skipped silently. Called directly by the cluster tail for events from siblings.
+ */
+export function deliverRecordLocal(
+  collection: string,
+  event: RealtimeEvent,
+  opts?: BroadcastOpts,
+): void {
   const targets: (string | undefined)[] = [
     collection, // collection-level
     WILDCARD, // global
@@ -223,9 +241,16 @@ export function broadcast(collection: string, event: RealtimeEvent, opts?: Broad
  * `broadcast()`, this isn't tied to a record event — used for flag deltas,
  * settings hot-reload notices, and similar admin signals. Topic naming
  * convention: leading double underscore (e.g. `__flags`) so it can't
- * collide with a user-defined collection.
+ * collide with a user-defined collection. Cross-worker under cluster mode.
  */
 export function broadcastSystem(topic: string, message: object): void {
+  deliverSystemLocal(topic, message);
+  // No-op in single-process mode.
+  publishSystem(topic, message);
+}
+
+/** Deliver a system message to subscribers of `topic` ON THIS WORKER ONLY. */
+export function deliverSystemLocal(topic: string, message: object): void {
   const inner = subs.get(topic);
   if (!inner) return;
   const payload = JSON.stringify(message);
