@@ -1,9 +1,9 @@
 /**
- * `vaultbase token <subcmd>` — local CLI for API-token management.
+ * `cogworks token <subcmd>` — local CLI for API-token management.
  *
- *   vaultbase token mint --name "CI bot" --scope write [--scope read] [--ttl 90d]
- *   vaultbase token list
- *   vaultbase token revoke <id>
+ *   cogworks token mint --name "CI bot" --scope write [--scope read] [--ttl 90d]
+ *   cogworks token list
+ *   cogworks token revoke <id>
  *
  * Bypasses HTTP — operates on the local DB directly. Useful for first-token
  * bootstrapping (before the admin UI is reachable from elsewhere) and for
@@ -74,7 +74,7 @@ function parseFlags(argv: string[]): ParsedArgs {
 }
 
 function printHelp(): void {
-  process.stdout.write(`Usage: vaultbase token <subcommand> [flags]
+  process.stdout.write(`Usage: cogworks token <subcommand> [flags]
 
 Subcommands:
   mint      Mint a new API token (returned ONCE — save it)
@@ -90,9 +90,9 @@ Flags:
   --json                   Machine-readable JSON output
 
 Examples:
-  vaultbase token mint --name "CI bot" --scope write --scope read --ttl 1y
-  vaultbase token list --json
-  vaultbase token revoke 7f9a3c1d-...
+  cogworks token mint --name "CI bot" --scope write --scope read --ttl 1y
+  cogworks token list --json
+  cogworks token revoke 7f9a3c1d-...
 `);
 }
 
@@ -106,7 +106,7 @@ async function resolveAdmin(asEmail?: string): Promise<{ id: string; email: stri
     throw new Error(
       asEmail
         ? `admin '${asEmail}' not found`
-        : "no admin exists yet — create one via /_/setup or `vaultbase setup-admin` first",
+        : "no admin exists yet — create one via /_/setup or `cogworks setup-admin` first",
     );
   return { id: row.id, email: row.email };
 }
@@ -170,7 +170,7 @@ async function cmdList(args: ParsedArgs): Promise<void> {
 }
 
 async function cmdRevoke(id: string, args: ParsedArgs): Promise<void> {
-  if (!id) throw new Error("token id required: `vaultbase token revoke <id>`");
+  if (!id) throw new Error("token id required: `cogworks token revoke <id>`");
   const r = await revokeApiToken(id);
   if (!r.revoked) throw new Error(`token '${id}' not found`);
   if (args.json) process.stdout.write(`${JSON.stringify({ revoked: true, id })}\n`);
@@ -201,7 +201,7 @@ export async function runTokenCli(
       const args = parseFlags(argv.slice(2));
       await cmdRevoke(argv[1] ?? "", args);
     } else {
-      throw new Error(`unknown subcommand '${sub}' — try 'vaultbase token help'`);
+      throw new Error(`unknown subcommand '${sub}' — try 'cogworks token help'`);
     }
   } finally {
     closeDb();

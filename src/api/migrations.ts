@@ -51,7 +51,7 @@ export function makeMigrationsPlugin(jwtSecret: string) {
       };
       c.header(
         "Content-Disposition",
-        `attachment; filename="vaultbase-snapshot-${snapshot.generated_at.slice(0, 10)}.json"`,
+        `attachment; filename="cogworks-snapshot-${snapshot.generated_at.slice(0, 10)}.json"`,
       );
       return c.json(snapshot);
     })

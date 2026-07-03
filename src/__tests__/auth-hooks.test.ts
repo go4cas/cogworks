@@ -26,7 +26,7 @@ const SECRET = "test-secret-auth-hooks";
 let tmpDir: string;
 
 beforeEach(async () => {
-  tmpDir = mkdtempSync(join(tmpdir(), "vaultbase-auth-hooks-"));
+  tmpDir = mkdtempSync(join(tmpdir(), "cogworks-auth-hooks-"));
   setLogsDir(tmpDir);
   initDb(":memory:");
   await runMigrations();

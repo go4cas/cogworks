@@ -2,7 +2,7 @@ import type { Database } from "bun:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { closeDb, getDb, initDb } from "../db/client.ts";
 import { runMigrations } from "../db/migrate.ts";
-import { VAULTBASE_VERSION } from "../core/version.ts";
+import { COGWORKS_VERSION } from "../core/version.ts";
 
 function rawClient(): Database {
   return (getDb() as unknown as { $client: Database }).$client;
@@ -22,7 +22,7 @@ describe("runMigrations", () => {
     const stamp = client.prepare(`SELECT version FROM cogworks_schema WHERE id = 1`).get() as {
       version: string;
     } | null;
-    expect(stamp?.version).toBe(VAULTBASE_VERSION);
+    expect(stamp?.version).toBe(COGWORKS_VERSION);
 
     // A representative core table exists and is usable.
     const table = client

@@ -186,7 +186,7 @@ function ConnectTab({ tokens }: { tokens: TokenRow[] }) {
           >
             <option value="claude">Claude Desktop (npm bridge)</option>
             <option value="cursor">Cursor (npm bridge)</option>
-            <option value="raw">Raw stdio (vaultbase binary)</option>
+            <option value="raw">Raw stdio (cogworks binary)</option>
             <option value="http">Direct HTTP (curl / SDK)</option>
           </select>
         </VbField>
@@ -248,12 +248,12 @@ function buildSnippet(
       body: JSON.stringify(
         {
           mcpServers: {
-            vaultbase: {
+            cogworks: {
               command: "npx",
-              args: ["-y", "@vaultbase/mcp"],
+              args: ["-y", "@cogworks/mcp"],
               env: {
-                VAULTBASE_URL: url,
-                VAULTBASE_MCP_TOKEN: token,
+                COGWORKS_URL: url,
+                COGWORKS_MCP_TOKEN: token,
               },
             },
           },
@@ -270,12 +270,12 @@ function buildSnippet(
       body: JSON.stringify(
         {
           mcpServers: {
-            vaultbase: {
+            cogworks: {
               command: "npx",
-              args: ["-y", "@vaultbase/mcp"],
+              args: ["-y", "@cogworks/mcp"],
               env: {
-                VAULTBASE_URL: url,
-                VAULTBASE_MCP_TOKEN: token,
+                COGWORKS_URL: url,
+                COGWORKS_MCP_TOKEN: token,
               },
             },
           },
@@ -292,17 +292,17 @@ function buildSnippet(
       body: JSON.stringify(
         {
           mcpServers: {
-            vaultbase: {
-              command: "vaultbase",
+            cogworks: {
+              command: "cogworks",
               args: ["mcp"],
-              env: { VAULTBASE_MCP_TOKEN: token },
+              env: { COGWORKS_MCP_TOKEN: token },
             },
           },
         },
         null,
         2,
       ),
-      footer: "Use this when the vaultbase binary is on the same machine as the LLM client. No npm bridge needed.",
+      footer: "Use this when the cogworks binary is on the same machine as the LLM client. No npm bridge needed.",
     };
   }
   return {
@@ -697,7 +697,7 @@ export default function McpPage() {
     <>
       <VbPageHeader
         title="MCP"
-        sub="Model Context Protocol — connect Claude / Cursor / any MCP client to this Vaultbase. See live clients and the full tool / resource / prompt catalog."
+        sub="Model Context Protocol — connect Claude / Cursor / any MCP client to this Cogworks. See live clients and the full tool / resource / prompt catalog."
         right={
           <a
             href="https://modelcontextprotocol.io"

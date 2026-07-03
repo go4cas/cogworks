@@ -4,11 +4,11 @@ import { Hono } from "hono";
  * Built-in HTML pages for the email-link auth flows: password reset, email
  * verification and OTP / magic-link login. The link emails point at
  * `{app.url}/auth/{kind}?token=...&collection=...`. Without a frontend at
- * `app.url`, these tokens would have nowhere to land — so vaultbase ships
+ * `app.url`, these tokens would have nowhere to land — so cogworks ships
  * minimal self-contained pages that POST to the existing JSON API.
  *
  * Each page is a single inlined HTML document (no external assets, no JS
- * framework) so it works whether vaultbase is the host or behind a custom
+ * framework) so it works whether cogworks is the host or behind a custom
  * domain.
  */
 
@@ -129,9 +129,9 @@ ${COMMON_HEAD}
 </head>
 <body>
 <div class="card">
-  <div class="brand"><span class="dot"></span><span>vaultbase</span></div>
+  <div class="brand"><span class="dot"></span><span>cogworks</span></div>
   ${body}
-  <div class="footer">vaultbase &middot; self-hosted backend</div>
+  <div class="footer">cogworks &middot; self-hosted backend</div>
 </div>
 </body>
 </html>`;

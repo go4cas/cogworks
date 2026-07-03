@@ -99,9 +99,9 @@ jobs:
         # vendor chunks (primereact, monaco, react-vendor).
         run: |
           set -eu
-          for f in releases/vaultbase-linux-x64 releases/vaultbase-linux-arm64 \
-                   releases/vaultbase-linux-x64-musl releases/vaultbase-macos-x64 \
-                   releases/vaultbase-macos-arm64 releases/vaultbase-windows-x64.exe; do
+          for f in releases/cogworks-linux-x64 releases/cogworks-linux-arm64 \
+                   releases/cogworks-linux-x64-musl releases/cogworks-macos-x64 \
+                   releases/cogworks-macos-arm64 releases/cogworks-windows-x64.exe; do
             asset_hits=$(grep -ac 'index-' "$f" || true)
             primereact_hits=$(grep -ac 'primereact' "$f" || true)
             monaco_hits=$(grep -ac 'monaco' "$f" || true)
@@ -115,7 +115,7 @@ jobs:
       - name: Generate SHA-256 sidecars
         run: |
           cd releases
-          for f in vaultbase-*; do
+          for f in cogworks-*; do
             # Skip already-generated .sha256 files (rerun safety).
             case "$f" in *.sha256) continue ;; esac
             sha256sum "$f" | awk -v name="$f" '{ print $1 "  " name }' > "${f}.sha256"
@@ -127,7 +127,7 @@ jobs:
           cd releases
           # One file with all hashes — easier to verify with a single download:
           #   curl -O .../SHA256SUMS && sha256sum -c SHA256SUMS
-          cat vaultbase-*.sha256 \
+          cat cogworks-*.sha256 \
             | grep -v '^$' \
             > SHA256SUMS
           cat SHA256SUMS
@@ -142,13 +142,13 @@ jobs:
       - name: Generate SBOMs (CycloneDX JSON per binary)
         run: |
           cd releases
-          for f in vaultbase-linux-x64 vaultbase-linux-arm64 vaultbase-linux-x64-musl \
-                   vaultbase-macos-x64 vaultbase-macos-arm64 vaultbase-windows-x64.exe; do
+          for f in cogworks-linux-x64 cogworks-linux-arm64 cogworks-linux-x64-musl \
+                   cogworks-macos-x64 cogworks-macos-arm64 cogworks-windows-x64.exe; do
             echo "→ SBOM for $f"
             syft "$f" -o cyclonedx-json > "${f}.cdx.json"
           done
           # One SBOM for the source tree too (NPM dependency graph + lockfile).
-          syft dir:. -o cyclonedx-json > vaultbase-source.cdx.json
+          syft dir:. -o cyclonedx-json > cogworks-source.cdx.json
           ls -la *.cdx.json
 
       # ── Cosign keyless sigs ─────────────────────────────────────────────
@@ -161,8 +161,8 @@ jobs:
       - name: Sign release artifacts (keyless)
         run: |
           cd releases
-          for f in vaultbase-linux-x64 vaultbase-linux-arm64 vaultbase-linux-x64-musl \
-                   vaultbase-macos-x64 vaultbase-macos-arm64 vaultbase-windows-x64.exe \
+          for f in cogworks-linux-x64 cogworks-linux-arm64 cogworks-linux-x64-musl \
+                   cogworks-macos-x64 cogworks-macos-arm64 cogworks-windows-x64.exe \
                    SHA256SUMS; do
             echo "→ signing $f"
             cosign sign-blob --yes \
@@ -180,36 +180,36 @@ jobs:
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
-            releases/vaultbase-linux-x64
-            releases/vaultbase-linux-x64.sha256
-            releases/vaultbase-linux-x64.sig
-            releases/vaultbase-linux-x64.pem
-            releases/vaultbase-linux-x64.cdx.json
-            releases/vaultbase-linux-arm64
-            releases/vaultbase-linux-arm64.sha256
-            releases/vaultbase-linux-arm64.sig
-            releases/vaultbase-linux-arm64.pem
-            releases/vaultbase-linux-arm64.cdx.json
-            releases/vaultbase-linux-x64-musl
-            releases/vaultbase-linux-x64-musl.sha256
-            releases/vaultbase-linux-x64-musl.sig
-            releases/vaultbase-linux-x64-musl.pem
-            releases/vaultbase-linux-x64-musl.cdx.json
-            releases/vaultbase-macos-x64
-            releases/vaultbase-macos-x64.sha256
-            releases/vaultbase-macos-x64.sig
-            releases/vaultbase-macos-x64.pem
-            releases/vaultbase-macos-x64.cdx.json
-            releases/vaultbase-macos-arm64
-            releases/vaultbase-macos-arm64.sha256
-            releases/vaultbase-macos-arm64.sig
-            releases/vaultbase-macos-arm64.pem
-            releases/vaultbase-macos-arm64.cdx.json
-            releases/vaultbase-windows-x64.exe
-            releases/vaultbase-windows-x64.exe.sig
-            releases/vaultbase-windows-x64.exe.pem
-            releases/vaultbase-windows-x64.exe.cdx.json
+            releases/cogworks-linux-x64
+            releases/cogworks-linux-x64.sha256
+            releases/cogworks-linux-x64.sig
+            releases/cogworks-linux-x64.pem
+            releases/cogworks-linux-x64.cdx.json
+            releases/cogworks-linux-arm64
+            releases/cogworks-linux-arm64.sha256
+            releases/cogworks-linux-arm64.sig
+            releases/cogworks-linux-arm64.pem
+            releases/cogworks-linux-arm64.cdx.json
+            releases/cogworks-linux-x64-musl
+            releases/cogworks-linux-x64-musl.sha256
+            releases/cogworks-linux-x64-musl.sig
+            releases/cogworks-linux-x64-musl.pem
+            releases/cogworks-linux-x64-musl.cdx.json
+            releases/cogworks-macos-x64
+            releases/cogworks-macos-x64.sha256
+            releases/cogworks-macos-x64.sig
+            releases/cogworks-macos-x64.pem
+            releases/cogworks-macos-x64.cdx.json
+            releases/cogworks-macos-arm64
+            releases/cogworks-macos-arm64.sha256
+            releases/cogworks-macos-arm64.sig
+            releases/cogworks-macos-arm64.pem
+            releases/cogworks-macos-arm64.cdx.json
+            releases/cogworks-windows-x64.exe
+            releases/cogworks-windows-x64.exe.sig
+            releases/cogworks-windows-x64.exe.pem
+            releases/cogworks-windows-x64.exe.cdx.json
             releases/SHA256SUMS
             releases/SHA256SUMS.sig
             releases/SHA256SUMS.pem
-            releases/vaultbase-source.cdx.json
+            releases/cogworks-source.cdx.json

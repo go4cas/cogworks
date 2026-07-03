@@ -8,10 +8,10 @@
  * them succeeded or schedules a retry per the webhook's backoff policy.
  *
  *   - Headers sent on every delivery:
- *       X-Vaultbase-Event:     "posts.create"
- *       X-Vaultbase-Delivery:  "<delivery uuid>"
- *       X-Vaultbase-Timestamp: "<unix-seconds>"
- *       X-Vaultbase-Signature: "sha256=<hex hmac of {timestamp}.{body}>"
+ *       X-Cogworks-Event:     "posts.create"
+ *       X-Cogworks-Delivery:  "<delivery uuid>"
+ *       X-Cogworks-Timestamp: "<unix-seconds>"
+ *       X-Cogworks-Signature: "sha256=<hex hmac of {timestamp}.{body}>"
  *
  *   - Verifying receiver pseudocode:
  *       const expected = "sha256=" + hmacSha256(secret, ts + "." + rawBody);
@@ -193,10 +193,10 @@ async function deliverOne(d: DeliveryRow): Promise<void> {
     "content-length",
     "content-type",
     "user-agent",
-    "x-vaultbase-event",
-    "x-vaultbase-delivery",
-    "x-vaultbase-timestamp",
-    "x-vaultbase-signature",
+    "x-cogworks-event",
+    "x-cogworks-delivery",
+    "x-cogworks-timestamp",
+    "x-cogworks-signature",
     "authorization",
     "cookie",
     "set-cookie",
@@ -218,11 +218,11 @@ async function deliverOne(d: DeliveryRow): Promise<void> {
 
   const headers: Record<string, string> = {
     "content-type": "application/json",
-    "user-agent": "vaultbase-webhook",
-    "x-vaultbase-event": d.event,
-    "x-vaultbase-delivery": d.id,
-    "x-vaultbase-timestamp": ts,
-    "x-vaultbase-signature": `sha256=${sig}`,
+    "user-agent": "cogworks-webhook",
+    "x-cogworks-event": d.event,
+    "x-cogworks-delivery": d.id,
+    "x-cogworks-timestamp": ts,
+    "x-cogworks-signature": `sha256=${sig}`,
     ...extraHeaders,
   };
 

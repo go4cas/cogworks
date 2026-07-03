@@ -7,7 +7,7 @@
  * an evaluation context.
  *
  * Hash bucketing uses SHA-1(key + ":" + stickyValue) modulo 100 — same
- * input → same bucket across processes, so a fleet of vaultbase instances
+ * input → same bucket across processes, so a fleet of cogworks instances
  * keeps individual users on the same variation.
  *
  * Public surface:

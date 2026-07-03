@@ -5,16 +5,16 @@ Drop-in templates for production deployment.
 ## One-shot install (Linux)
 
 ```bash
-curl -fsSL https://get.vaultbase.dev | sh
+curl -fsSL https://get.cogworks.dev | sh
 ```
 
 What it does:
 - Detects arch (x64 / arm64) + libc (glibc / musl).
 - Downloads the matching binary from the latest GitHub release, verifies
   its SHA-256.
-- Creates the `vaultbase` system user and `/var/lib/vaultbase` data dir.
-- Generates a JWT secret in `/etc/vaultbase/vaultbase.env`.
-- Drops a hardened systemd unit at `/etc/systemd/system/vaultbase.service`.
+- Creates the `cogworks` system user and `/var/lib/cogworks` data dir.
+- Generates a JWT secret in `/etc/cogworks/cogworks.env`.
+- Drops a hardened systemd unit at `/etc/systemd/system/cogworks.service`.
 - Enables + starts the service.
 
 Re-run any time to upgrade — data, config, JWT secret, admin accounts
@@ -32,7 +32,7 @@ sh -s -- --no-systemd         # skip unit install (containers, runit, ...)
 ## Bootstrap admin (no web wizard)
 
 ```bash
-sudo vaultbase setup-admin --email you@example.com --password '<pw>'
+sudo cogworks setup-admin --email you@example.com --password '<pw>'
 ```
 
 CLI-only. Skips the web setup endpoint entirely — safe for headless
@@ -40,24 +40,24 @@ deploys behind a firewall before the reverse proxy is wired.
 
 ## Reverse proxy
 
-In-process gzip / TLS were removed from Vaultbase (event-loop blockers).
+In-process gzip / TLS were removed from Cogworks (event-loop blockers).
 Always run behind nginx / Caddy / Cloudflare in production.
 
 - **Caddy** (auto-HTTPS): see [`caddy/Caddyfile`](caddy/Caddyfile).
-- **nginx** (manual TLS via certbot): see [`nginx/vaultbase.conf`](nginx/vaultbase.conf).
+- **nginx** (manual TLS via certbot): see [`nginx/cogworks.conf`](nginx/cogworks.conf).
 
 ## Manual systemd setup
 
 If `--no-systemd` was used or the install script wasn't applicable:
 
 ```bash
-sudo cp systemd/vaultbase.service /etc/systemd/system/
+sudo cp systemd/cogworks.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now vaultbase
+sudo systemctl enable --now cogworks
 ```
 
-Make sure `/etc/vaultbase/vaultbase.env` exists with at least
-`VAULTBASE_JWT_SECRET=<48-bytes-base64>` set.
+Make sure `/etc/cogworks/cogworks.env` exists with at least
+`COGWORKS_JWT_SECRET=<48-bytes-base64>` set.
 
 ## Cluster mode (multi-process throughput)
 
@@ -65,10 +65,10 @@ Single Bun process saturates one core. For higher throughput on multi-core
 hosts, switch the systemd unit's `ExecStart` to:
 
 ```ini
-ExecStart=/usr/local/bin/vaultbase cluster
+ExecStart=/usr/local/bin/cogworks cluster
 ```
 
-…and set `VAULTBASE_WORKERS=N` in `/etc/vaultbase/vaultbase.env`
+…and set `COGWORKS_WORKERS=N` in `/etc/cogworks/cogworks.env`
 (default = available CPU cores).
 
 The parent process supervises N worker processes; all share the listen

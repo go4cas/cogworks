@@ -13,7 +13,7 @@
  * Session model: stateless. Each POST is an independent JSON-RPC turn;
  * the SSE leg is purely for server-initiated traffic. A client wanting
  * to drive the server in lockstep with stdio just opens both legs at
- * once — see `@vaultbase/mcp` for a stdio↔HTTP bridge that does this.
+ * once — see `@cogworks/mcp` for a stdio↔HTTP bridge that does this.
  */
 
 import { Hono } from "hono";
@@ -151,7 +151,7 @@ export function makeMcpPlugin(jwtSecret: string) {
         controller = null;
       };
 
-      // Honor VAULTBASE_TRUSTED_PROXIES: only consult X-Forwarded-For when
+      // Honor COGWORKS_TRUSTED_PROXIES: only consult X-Forwarded-For when
       // the immediate peer is in the trust list. Otherwise the peer IP is
       // authoritative — non-proxied clients can't spoof the origin field.
       let peerIp: string | null = null;
@@ -191,7 +191,7 @@ export function makeMcpPlugin(jwtSecret: string) {
           // Greeting — clients can use this to confirm the channel is up.
           const greeting = JSON.stringify({
             jsonrpc: "2.0",
-            method: "vaultbase/connected",
+            method: "cogworks/connected",
             params: { tokenName: auth.ctx.tokenName, scopes: auth.ctx.scopes },
           });
           ctrl.enqueue(sseFormat("message", greeting));

@@ -28,7 +28,7 @@
  *     rest of the loopback block.
  *
  * Trust model: this is a code-side defense in depth. Operators running
- * vaultbase under a Linux network namespace / nftables egress filter still
+ * cogworks under a Linux network namespace / nftables egress filter still
  * get hard kernel-level enforcement; this module is the soft layer that
  * works without root.
  *

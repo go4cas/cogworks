@@ -12,7 +12,7 @@ export interface Config {
 }
 
 /**
- * In production set `VAULTBASE_JWT_SECRET` explicitly. Falling through to the
+ * In production set `COGWORKS_JWT_SECRET` explicitly. Falling through to the
  * filesystem fallback writes a sensitive value to disk; rotating the secret
  * (forced log-out for everyone) requires deleting the file. The on-disk
  * file is created with mode `0600` so other UIDs can't read it.
@@ -37,7 +37,7 @@ async function loadJwtSecret(dataDir: string): Promise<string> {
 }
 
 export async function loadConfig(): Promise<Config> {
-  const dataDir = process.env.VAULTBASE_DATA_DIR ?? "./cogworks_data";
+  const dataDir = process.env.COGWORKS_DATA_DIR ?? "./cogworks_data";
   if (!existsSync(dataDir)) mkdirSync(dataDir, { recursive: true });
 
   const uploadDir = join(dataDir, "uploads");
@@ -46,15 +46,15 @@ export async function loadConfig(): Promise<Config> {
   const logsDir = join(dataDir, "logs");
   if (!existsSync(logsDir)) mkdirSync(logsDir, { recursive: true });
 
-  const jwtSecret = process.env.VAULTBASE_JWT_SECRET ?? (await loadJwtSecret(dataDir));
+  const jwtSecret = process.env.COGWORKS_JWT_SECRET ?? (await loadJwtSecret(dataDir));
 
   return {
-    port: parseInt(process.env.VAULTBASE_PORT ?? "8091", 10),
+    port: parseInt(process.env.COGWORKS_PORT ?? "8091", 10),
     dataDir,
     dbPath: join(dataDir, "data.db"),
     uploadDir,
     logsDir,
     jwtSecret,
-    encryptionKey: process.env.VAULTBASE_ENCRYPTION_KEY,
+    encryptionKey: process.env.COGWORKS_ENCRYPTION_KEY,
   };
 }

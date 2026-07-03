@@ -22,7 +22,7 @@ const SECRET = "test-secret-csv-stream";
 let tmpDir: string;
 
 beforeEach(async () => {
-  tmpDir = mkdtempSync(join(tmpdir(), "vaultbase-csv-stream-"));
+  tmpDir = mkdtempSync(join(tmpdir(), "cogworks-csv-stream-"));
   setLogsDir(tmpDir);
   initDb(":memory:");
   await runMigrations();

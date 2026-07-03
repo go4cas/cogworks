@@ -1,6 +1,6 @@
 /**
  * Design primitives — A·Refined aesthetic from the Notifications + Collections
- * redesign handoffs (vaultbase/project/shell.jsx + collections.jsx).
+ * redesign handoffs (cogworks/project/shell.jsx + collections.jsx).
  *
  * All visual tokens come from the --vb-* CSS variable block in globals.css.
  * Pages assemble these into the bigger layouts; nothing here knows about

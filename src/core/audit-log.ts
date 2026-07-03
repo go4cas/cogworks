@@ -23,8 +23,8 @@ function clientIp(request: Request): string | null {
   // a different code path). Read the XFF header verbatim only when at least
   // one trusted-proxy CIDR is configured — otherwise fall back to null,
   // matching ratelimit's defensive default. Operators who want exact IPs
-  // here should set VAULTBASE_TRUSTED_PROXIES.
-  const trustedRaw = process.env.VAULTBASE_TRUSTED_PROXIES ?? "";
+  // here should set COGWORKS_TRUSTED_PROXIES.
+  const trustedRaw = process.env.COGWORKS_TRUSTED_PROXIES ?? "";
   if (!trustedRaw.trim()) return null;
   const xff = request.headers.get("x-forwarded-for");
   if (!xff) return null;

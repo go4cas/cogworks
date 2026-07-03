@@ -124,7 +124,7 @@ export function makeIndexesPlugin(jwtSecret: string) {
         // Sanity check: only allow our prefixes
         if (!idxName.startsWith("idx_") && !idxName.startsWith("uniq_")) {
           return c.json(
-            { error: "Refusing to drop index outside vaultbase prefix", code: 422 },
+            { error: "Refusing to drop index outside cogworks prefix", code: 422 },
             422,
           );
         }

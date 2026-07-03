@@ -4,9 +4,9 @@
  * info/debug → stdout, warn/error → stderr (matches the prior console.* split
  * and 12-factor: let the supervisor route the streams). Each line carries a
  * timestamp, level, message, the cluster worker id (when running under
- * `vaultbase cluster`), and whatever context fields the call site passes.
+ * `cogworks cluster`), and whatever context fields the call site passes.
  *
- * Level threshold via `VAULTBASE_LOG_LEVEL` (debug|info|warn|error, default
+ * Level threshold via `COGWORKS_LOG_LEVEL` (debug|info|warn|error, default
  * info). Error values in context are serialised to {name,message,stack} — a
  * plain JSON.stringify would otherwise emit `{}` for an Error.
  */
@@ -14,8 +14,8 @@ const LEVELS = { debug: 10, info: 20, warn: 30, error: 40 } as const;
 export type LogLevel = keyof typeof LEVELS;
 export type LogContext = Record<string, unknown>;
 
-const threshold = LEVELS[(process.env.VAULTBASE_LOG_LEVEL as LogLevel) ?? "info"] ?? LEVELS.info;
-const workerId = process.env.VAULTBASE_WORKER_ID;
+const threshold = LEVELS[(process.env.COGWORKS_LOG_LEVEL as LogLevel) ?? "info"] ?? LEVELS.info;
+const workerId = process.env.COGWORKS_WORKER_ID;
 
 function replacer(_key: string, value: unknown): unknown {
   if (value instanceof Error) {

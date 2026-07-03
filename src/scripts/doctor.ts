@@ -1,5 +1,5 @@
 /**
- * `vaultbase doctor` — pre-flight checks for the v0.11 auth-collection
+ * `cogworks doctor` — pre-flight checks for the v0.11 auth-collection
  * migration. Reports on anything that would block or silently lose data,
  * exits non-zero if a blocker is present so CI / scripts can guard.
  *
@@ -187,7 +187,7 @@ export function runDoctor(dbPath: string): DoctorReport {
 export function runDoctorCli(_argv: readonly string[], dbPath: string): number {
   const report = runDoctor(dbPath);
   if (report.ok && report.warnings.length === 0) {
-    process.stdout.write("✓ vaultbase doctor — clean. v0.11 migration is safe.\n");
+    process.stdout.write("✓ cogworks doctor — clean. v0.11 migration is safe.\n");
     return 0;
   }
   if (report.blockers.length > 0) {
@@ -203,7 +203,7 @@ export function runDoctorCli(_argv: readonly string[], dbPath: string): number {
     }
   }
   if (!report.ok) {
-    process.stdout.write("\nFix the blockers, then re-run `vaultbase doctor`.\n");
+    process.stdout.write("\nFix the blockers, then re-run `cogworks doctor`.\n");
     return 1;
   }
   process.stdout.write(

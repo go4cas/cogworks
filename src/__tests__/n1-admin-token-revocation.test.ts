@@ -123,7 +123,7 @@ describe("N-1: admin endpoints honour token revocation", () => {
       jti: crypto.randomUUID(),
     })
       .setProtectedHeader({ alg: "HS256" })
-      .setIssuer("not-vaultbase")
+      .setIssuer("not-cogworks")
       .setAudience("admin")
       .setIssuedAt(now)
       .setExpirationTime("1h")

@@ -11,7 +11,7 @@ import { makeHookHelpers } from "../core/hooks.ts";
 let tmpDir: string;
 
 beforeEach(async () => {
-  tmpDir = mkdtempSync(join(tmpdir(), "vaultbase-helpers-notify-"));
+  tmpDir = mkdtempSync(join(tmpdir(), "cogworks-helpers-notify-"));
   setLogsDir(tmpDir);
   initDb(":memory:");
   await runMigrations();

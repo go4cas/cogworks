@@ -46,7 +46,7 @@ if ! command -v oha >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "── Vaultbase profile capture ──────────────────────────────────────"
+echo "── Cogworks profile capture ──────────────────────────────────────"
 echo "URL:          ${URL}"
 echo "Duration:     ${DURATION}"
 echo "Concurrency:  ${CONCURRENCY}"

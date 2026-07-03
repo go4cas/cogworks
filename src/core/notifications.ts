@@ -9,9 +9,9 @@
  *
  * Provider-specific shapes:
  *   - OneSignal: external_id-based, server-side fan-out across the user's
- *     devices. Vaultbase never sees device tokens — the OneSignal client SDK
- *     calls `OneSignal.login(vaultbaseUserId)` to bind external_id once.
- *   - FCM: per-token sends. Vaultbase stores raw FCM registration tokens in
+ *     devices. Cogworks never sees device tokens — the OneSignal client SDK
+ *     calls `OneSignal.login(cogworksUserId)` to bind external_id once.
+ *   - FCM: per-token sends. Cogworks stores raw FCM registration tokens in
  *     `cw_device_tokens` and POSTs once per device. Auth is OAuth2 bearer
  *     minted from a service-account.json (RS256 JWT exchange, ~55min cache).
  *

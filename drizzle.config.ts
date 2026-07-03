@@ -5,6 +5,6 @@ export default {
   out: "./drizzle",
   dialect: "sqlite",
   dbCredentials: {
-    url: "./vaultbase_data/data.db",
+    url: "./cogworks_data/data.db",
   },
 } satisfies Config;

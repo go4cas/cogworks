@@ -2,7 +2,7 @@
  * MCP tool registry + dispatch.
  *
  * Each tool declares:
- *   - a name (`vaultbase.<verb>_<noun>` convention)
+ *   - a name (`cogworks.<verb>_<noun>` convention)
  *   - a description (rendered to the LLM in tools/list)
  *   - an inputSchema (JSON Schema; the LLM uses it to construct calls)
  *   - a required `scope` (checked against the API token's scopes before

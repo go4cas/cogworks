@@ -2,7 +2,7 @@
  * MCP / JSON-RPC 2.0 message shapes.
  *
  * Subset of the Model Context Protocol spec at modelcontextprotocol.io
- * sufficient for vaultbase's Phase-1 surface: initialize, tools/list,
+ * sufficient for cogworks's Phase-1 surface: initialize, tools/list,
  * tools/call. Resources, prompts, sampling, and notifications-from-server
  * land in Phase 3.
  */

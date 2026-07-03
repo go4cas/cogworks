@@ -40,7 +40,7 @@ function mkApp() {
 }
 
 beforeEach(async () => {
-  tmpDir = mkdtempSync(join(tmpdir(), "vaultbase-mcp-http-"));
+  tmpDir = mkdtempSync(join(tmpdir(), "cogworks-mcp-http-"));
   setLogsDir(tmpDir);
   initDb(":memory:");
   await runMigrations();
@@ -185,6 +185,6 @@ describe("MCP HTTP transport", () => {
     const res = await rpc(app, { jsonrpc: "2.0", id: 3, method: "tools/list" }, token);
     const body = (await res.json()) as { result: { tools: Array<{ name: string }> } };
     const names = body.result.tools.map((t) => t.name);
-    expect(names).toContain("vaultbase.list_collections");
+    expect(names).toContain("cogworks.list_collections");
   });
 });

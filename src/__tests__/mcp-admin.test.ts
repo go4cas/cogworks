@@ -52,7 +52,7 @@ function mkApp() {
 }
 
 beforeEach(async () => {
-  tmpDir = mkdtempSync(join(tmpdir(), "vaultbase-mcp-admin-"));
+  tmpDir = mkdtempSync(join(tmpdir(), "cogworks-mcp-admin-"));
   setLogsDir(tmpDir);
   initDb(":memory:");
   await runMigrations();
@@ -151,11 +151,11 @@ describe("GET /admin/mcp/catalog", () => {
       };
     };
     const toolNames = body.data.tools.map((t) => t.name);
-    expect(toolNames).toContain("vaultbase.list_collections");
-    expect(toolNames).toContain("vaultbase.list_posts");
-    expect(body.data.resources.map((r) => r.uri)).toContain("vaultbase://collections");
+    expect(toolNames).toContain("cogworks.list_collections");
+    expect(toolNames).toContain("cogworks.list_posts");
+    expect(body.data.resources.map((r) => r.uri)).toContain("cogworks://collections");
     expect(body.data.resourceTemplates.map((r) => r.uriTemplate)).toContain(
-      "vaultbase://collection/{name}",
+      "cogworks://collection/{name}",
     );
     expect(body.data.prompts.map((p) => p.name)).toContain("design-collection");
     expect(body.data.counts.tools).toBe(toolNames.length);

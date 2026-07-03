@@ -1,5 +1,5 @@
 /**
- * Long-lived API tokens — vaultbase's Sanctum-style personal-access-token
+ * Long-lived API tokens — cogworks's Sanctum-style personal-access-token
  * surface, distinct from short-lived user/admin JWTs.
  *
  * Use cases (see docs/concepts/api-tokens.md):
@@ -29,7 +29,7 @@ import { apiTokens } from "../db/schema.ts";
 import { signAuthToken, revokeToken } from "../core/sec.ts";
 
 /** Stable token-prefix so leaks are grep-able. */
-export const API_TOKEN_PREFIX = "vbat_";
+export const API_TOKEN_PREFIX = "cwat_";
 
 /** Maximum allowed token lifetime — 10 years. Anything longer is asking for trouble. */
 export const MAX_API_TOKEN_TTL_SEC = 10 * 365 * 24 * 60 * 60;
@@ -283,12 +283,12 @@ export function startApiTokenUsageFlusher(): void {
  * pass plain JWTs in rare paths — tests, internal scripts).
  */
 export function stripApiTokenPrefix(token: string): string {
-  return token.startsWith(API_TOKEN_PREFIX) ? token.slice(API_TOKEN_PREFIX.length) : token;
+  return token.startsWith("cwat_") || token.startsWith("vbat_") ? token.slice(5) : token;
 }
 
 /** True if the wire token uses the API-token prefix. */
 export function isApiTokenFormat(token: string): boolean {
-  return token.startsWith(API_TOKEN_PREFIX);
+  return token.startsWith("cwat_") || token.startsWith("vbat_");
 }
 
 // ── Pruning ──────────────────────────────────────────────────────────────────

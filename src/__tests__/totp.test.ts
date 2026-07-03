@@ -98,12 +98,12 @@ describe("buildOtpauthUrl", () => {
     const url = buildOtpauthUrl({
       secret: "JBSWY3DPEHPK3PXP",
       accountName: "alice@example.com",
-      issuer: "Vaultbase",
+      issuer: "Cogworks",
     });
-    expect(url.startsWith("otpauth://totp/Vaultbase:alice%40example.com?")).toBe(true);
+    expect(url.startsWith("otpauth://totp/Cogworks:alice%40example.com?")).toBe(true);
     const u = new URL(url);
     expect(u.searchParams.get("secret")).toBe("JBSWY3DPEHPK3PXP");
-    expect(u.searchParams.get("issuer")).toBe("Vaultbase");
+    expect(u.searchParams.get("issuer")).toBe("Cogworks");
     expect(u.searchParams.get("digits")).toBe("6");
     expect(u.searchParams.get("period")).toBe("30");
     expect(u.searchParams.get("algorithm")).toBe("SHA1");

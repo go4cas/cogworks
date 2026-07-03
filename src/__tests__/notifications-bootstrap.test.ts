@@ -21,7 +21,7 @@ const JWT_SECRET = "bootstrap-test-secret";
 let tmpDir: string;
 
 beforeEach(async () => {
-  tmpDir = mkdtempSync(join(tmpdir(), "vaultbase-notify-bs-"));
+  tmpDir = mkdtempSync(join(tmpdir(), "cogworks-notify-bs-"));
   setLogsDir(tmpDir);
   initDb(":memory:");
   await runMigrations();

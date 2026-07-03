@@ -1,21 +1,21 @@
 [Unit]
-Description=Vaultbase backend
-Documentation=https://docs.vaultbase.dev
+Description=Cogworks backend
+Documentation=https://docs.cogworks.dev
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=vaultbase
-Group=vaultbase
-EnvironmentFile=/etc/vaultbase/vaultbase.env
-ExecStart=/usr/local/bin/vaultbase
+User=cogworks
+Group=cogworks
+EnvironmentFile=/etc/cogworks/cogworks.env
+ExecStart=/usr/local/bin/cogworks
 Restart=on-failure
 RestartSec=2s
 TimeoutStopSec=30s
 LimitNOFILE=65536
 
-# Hardening — vaultbase needs nothing from the host filesystem outside
+# Hardening — cogworks needs nothing from the host filesystem outside
 # its data dir. Lock everything else down.
 NoNewPrivileges=yes
 ProtectSystem=strict
@@ -38,9 +38,9 @@ RestrictSUIDSGID=yes
 # triggers SIGSYS and a core dump under seccomp. The remaining hardening
 # above is enough to neutralise the typical privilege-escalation paths.
 
-# Vaultbase only needs to write inside its data dir. ProtectSystem=strict
-# makes /etc/vaultbase read-only from the service's view (config is read once).
-ReadWritePaths=/var/lib/vaultbase
+# Cogworks only needs to write inside its data dir. ProtectSystem=strict
+# makes /etc/cogworks read-only from the service's view (config is read once).
+ReadWritePaths=/var/lib/cogworks
 CapabilityBoundingSet=
 AmbientCapabilities=
 

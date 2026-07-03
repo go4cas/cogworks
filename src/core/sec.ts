@@ -309,7 +309,7 @@ export function isAllowedUploadMime(mime: string): boolean {
 
 /**
  * IP extraction that respects `X-Forwarded-For` only when the immediate peer
- * is in `VAULTBASE_TRUSTED_PROXIES`. Returns the socket peer otherwise.
+ * is in `COGWORKS_TRUSTED_PROXIES`. Returns the socket peer otherwise.
  *
  * Trust list accepts both bare IPs (`10.0.0.5`) and CIDR ranges
  * (`10.0.0.0/8`, `2001:db8::/32`) — the typical "everything from my private
@@ -323,7 +323,7 @@ export function isAllowedUploadMime(mime: string): boolean {
 let _trustedProxiesCache: { raw: string; cidrs: ParsedCidr[]; bare: Set<string> } | null = null;
 
 function getTrustedProxies(): { cidrs: ParsedCidr[]; bare: Set<string> } | null {
-  const raw = process.env.VAULTBASE_TRUSTED_PROXIES ?? "";
+  const raw = process.env.COGWORKS_TRUSTED_PROXIES ?? "";
   if (!raw) return null;
   if (_trustedProxiesCache && _trustedProxiesCache.raw === raw) {
     return { cidrs: _trustedProxiesCache.cidrs, bare: _trustedProxiesCache.bare };
@@ -400,7 +400,7 @@ export function extractBearer(request: Request): string | null {
   if (h) {
     const raw = h.replace(/^Bearer\s+/i, "").trim();
     if (!raw) return null;
-    return raw.startsWith("vbat_") ? raw.slice(5) : raw;
+    return raw.startsWith("cwat_") || raw.startsWith("vbat_") ? raw.slice(5) : raw;
   }
   const cookieHeader = request.headers.get("cookie");
   if (!cookieHeader) return null;

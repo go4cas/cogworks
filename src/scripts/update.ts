@@ -1,5 +1,5 @@
 /**
- * `vaultbase update` — self-update CLI.
+ * `cogworks update` — self-update CLI.
  *
  * Pulls the latest signed release for the running platform from GitHub,
  * verifies the SHA-256 (always) and cosign signature (when cosign is
@@ -7,12 +7,12 @@
  * process keeps executing off the old inode; restart to pick up the new
  * binary.
  *
- *   vaultbase update                    interactive flow
- *   vaultbase update --check            print versions, exit 0 (in sync) or 1 (update available)
- *   vaultbase update --yes              non-interactive — don't prompt
- *   vaultbase update --version 0.8.0    pin to a specific release
- *   vaultbase update --no-verify        SHA-256 only; skip cosign even if present (warns)
- *   vaultbase update --allow-downgrade  permit moving to an older version
+ *   cogworks update                    interactive flow
+ *   cogworks update --check            print versions, exit 0 (in sync) or 1 (update available)
+ *   cogworks update --yes              non-interactive — don't prompt
+ *   cogworks update --version 0.8.0    pin to a specific release
+ *   cogworks update --no-verify        SHA-256 only; skip cosign even if present (warns)
+ *   cogworks update --allow-downgrade  permit moving to an older version
  *
  * Safety:
  *   - SHA-256 mismatch → abort, no swap
@@ -33,7 +33,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
-import { VAULTBASE_VERSION } from "../core/version.ts";
+import { COGWORKS_VERSION } from "../core/version.ts";
 
 interface UpdateFlags {
   check: boolean;
@@ -66,7 +66,7 @@ function parseFlags(argv: string[]): UpdateFlags {
       printHelp();
       process.exit(0);
     } else {
-      process.stderr.write(`vaultbase update: unknown flag '${a}'\n`);
+      process.stderr.write(`cogworks update: unknown flag '${a}'\n`);
       process.exit(2);
     }
   }
@@ -74,7 +74,7 @@ function parseFlags(argv: string[]): UpdateFlags {
 }
 
 function printHelp(): void {
-  process.stdout.write(`Usage: vaultbase update [flags]
+  process.stdout.write(`Usage: cogworks update [flags]
 
 Flags:
   --check                Print versions and exit (0 = in sync, 1 = update available)
@@ -88,7 +88,7 @@ Flags:
 }
 
 interface PlatformTarget {
-  /** Filename under github releases — e.g. "vaultbase-linux-x64". */
+  /** Filename under github releases — e.g. "cogworks-linux-x64". */
   artifact: string;
   /** True for Windows where the running binary is locked. */
   windows: boolean;
@@ -97,14 +97,14 @@ interface PlatformTarget {
 function detectPlatform(): PlatformTarget {
   const p = process.platform;
   const a = process.arch;
-  if (p === "win32" && a === "x64") return { artifact: "vaultbase-windows-x64.exe", windows: true };
-  if (p === "darwin" && a === "x64") return { artifact: "vaultbase-macos-x64", windows: false };
-  if (p === "darwin" && a === "arm64") return { artifact: "vaultbase-macos-arm64", windows: false };
-  if (p === "linux" && a === "arm64") return { artifact: "vaultbase-linux-arm64", windows: false };
+  if (p === "win32" && a === "x64") return { artifact: "cogworks-windows-x64.exe", windows: true };
+  if (p === "darwin" && a === "x64") return { artifact: "cogworks-macos-x64", windows: false };
+  if (p === "darwin" && a === "arm64") return { artifact: "cogworks-macos-arm64", windows: false };
+  if (p === "linux" && a === "arm64") return { artifact: "cogworks-linux-arm64", windows: false };
   if (p === "linux" && a === "x64") {
     // Detect musl (Alpine) vs glibc — different binary.
     const musl = isMusl();
-    return { artifact: musl ? "vaultbase-linux-x64-musl" : "vaultbase-linux-x64", windows: false };
+    return { artifact: musl ? "cogworks-linux-x64-musl" : "cogworks-linux-x64", windows: false };
   }
   throw new Error(`unsupported platform: ${p}/${a} — file an issue with this output`);
 }
@@ -130,12 +130,12 @@ interface Release {
 
 async function fetchRelease(version: string | null): Promise<Release> {
   const url = version
-    ? `https://api.github.com/repos/vaultbase-sh/vaultbase/releases/tags/v${version.replace(/^v/, "")}`
-    : `https://api.github.com/repos/vaultbase-sh/vaultbase/releases/latest`;
+    ? `https://api.github.com/repos/go4cas/cogworks/releases/tags/v${version.replace(/^v/, "")}`
+    : `https://api.github.com/repos/go4cas/cogworks/releases/latest`;
   const res = await fetch(url, {
     headers: {
       accept: "application/vnd.github+json",
-      "user-agent": `vaultbase-update/${VAULTBASE_VERSION}`,
+      "user-agent": `cogworks-update/${COGWORKS_VERSION}`,
     },
   });
   if (res.status === 404) throw new Error(`no release found at ${url}`);
@@ -162,7 +162,7 @@ function compareVersion(current: string, target: string): -1 | 0 | 1 {
 
 async function downloadTo(url: string, dest: string, log: (s: string) => void): Promise<void> {
   const res = await fetch(url, {
-    headers: { "user-agent": `vaultbase-update/${VAULTBASE_VERSION}` },
+    headers: { "user-agent": `cogworks-update/${COGWORKS_VERSION}` },
     redirect: "follow",
   });
   if (!res.ok) throw new Error(`download failed: ${res.status} ${url}`);
@@ -251,27 +251,27 @@ export async function runUpdate(argv: string[]): Promise<void> {
 
   const platform = detectPlatform();
   log(
-    `vaultbase ${VAULTBASE_VERSION} on ${process.platform}/${process.arch}${platform.artifact.includes("musl") ? " (musl)" : ""}`,
+    `cogworks ${COGWORKS_VERSION} on ${process.platform}/${process.arch}${platform.artifact.includes("musl") ? " (musl)" : ""}`,
   );
 
   log("checking for updates…");
   const release = await fetchRelease(flags.pinnedVersion);
   const target = release.tag_name.replace(/^v/, "");
-  const cmp = compareVersion(VAULTBASE_VERSION, target);
+  const cmp = compareVersion(COGWORKS_VERSION, target);
 
   if (cmp === 0) {
-    log(`already on ${VAULTBASE_VERSION} — nothing to do.`);
+    log(`already on ${COGWORKS_VERSION} — nothing to do.`);
     if (flags.check) process.exit(0);
     return;
   }
   if (cmp > 0 && !flags.allowDowngrade) {
     process.stderr.write(
-      `vaultbase update: target ${target} is older than current ${VAULTBASE_VERSION}; pass --allow-downgrade to override\n`,
+      `cogworks update: target ${target} is older than current ${COGWORKS_VERSION}; pass --allow-downgrade to override\n`,
     );
     process.exit(2);
   }
 
-  log(`update available: ${VAULTBASE_VERSION} → ${target}`);
+  log(`update available: ${COGWORKS_VERSION} → ${target}`);
   if (flags.check) process.exit(1);
 
   const binAsset = release.assets.find((a) => a.name === platform.artifact);
@@ -285,7 +285,7 @@ export async function runUpdate(argv: string[]): Promise<void> {
     log("");
     log(`This will replace the running binary at ${process.execPath}`);
     if (platform.windows)
-      log("⚠ on Windows the running .exe is locked — you must stop vaultbase first.");
+      log("⚠ on Windows the running .exe is locked — you must stop cogworks first.");
     log("");
     if (!(await promptYesNo(`Update to ${target}?`))) {
       log("aborted.");
@@ -295,12 +295,12 @@ export async function runUpdate(argv: string[]): Promise<void> {
 
   if (platform.windows) {
     process.stderr.write(
-      `vaultbase update: cannot replace a running .exe on Windows. Stop the daemon first, then run \`vaultbase update --yes\` again.\n`,
+      `cogworks update: cannot replace a running .exe on Windows. Stop the daemon first, then run \`cogworks update --yes\` again.\n`,
     );
     process.exit(2);
   }
 
-  const tmp = mkdtempSync(join(tmpdir(), "vaultbase-update-"));
+  const tmp = mkdtempSync(join(tmpdir(), "cogworks-update-"));
   log(`downloading to ${tmp}…`);
 
   const binPath = join(tmp, platform.artifact);
@@ -325,7 +325,7 @@ export async function runUpdate(argv: string[]): Promise<void> {
       await downloadTo(sigAsset.browser_download_url, sigPath, log);
       await downloadTo(certAsset.browser_download_url, certPath, log);
       log("verifying cosign signature…");
-      if (!runCosignVerify(binPath, sigPath, certPath, "vaultbase-sh/vaultbase", target)) {
+      if (!runCosignVerify(binPath, sigPath, certPath, "go4cas/cogworks", target)) {
         throw new Error("cosign signature verification failed — refusing to update");
       }
       log("  ✓ cosign ok");
@@ -373,7 +373,7 @@ export async function runUpdate(argv: string[]): Promise<void> {
 
   log("");
   log(`✓ updated to ${target}.`);
-  log(`  restart vaultbase to apply.`);
+  log(`  restart cogworks to apply.`);
   log("");
   if (release.body) {
     log("Release notes:");

@@ -3,26 +3,26 @@
  *
  * The MCP spec lets a server expose "Resources" the LLM can read without
  * burning a tool call. Resources are passive context — they don't take
- * arguments beyond the URI itself. Vaultbase exposes a small starter set:
+ * arguments beyond the URI itself. Cogworks exposes a small starter set:
  *
  *   Static URIs (resources/list):
- *     vaultbase://collections          schema enumeration (no PII)
- *     vaultbase://audit/recent         last 50 audit entries
- *     vaultbase://settings             non-secret settings keys
- *     vaultbase://server/info          version + protocol metadata
+ *     cogworks://collections          schema enumeration (no PII)
+ *     cogworks://audit/recent         last 50 audit entries
+ *     cogworks://settings             non-secret settings keys
+ *     cogworks://server/info          version + protocol metadata
  *
  *   Templates (resources/templates/list):
- *     vaultbase://collection/{name}        full schema for one collection
- *     vaultbase://record/{collection}/{id} one record (collection rules
+ *     cogworks://collection/{name}        full schema for one collection
+ *     cogworks://record/{collection}/{id} one record (collection rules
  *                                          enforced via the minting admin)
- *     vaultbase://logs/{date}              JSONL request logs for one day
+ *     cogworks://logs/{date}              JSONL request logs for one day
  *
  * Read-side scope: the LLM token must carry `mcp:read`. Settings / audit
  * resources are admin-equivalent visibility — same surface as the
  * read_audit_log / list_settings tools.
  */
 
-import { VAULTBASE_VERSION } from "../core/version.ts";
+import { COGWORKS_VERSION } from "../core/version.ts";
 import { listCollections, getCollection, parseFields } from "../core/collections.ts";
 import { listAuditEntries } from "../core/audit-log.ts";
 import { readLogs } from "../core/file-logger.ts";
@@ -54,46 +54,46 @@ export interface ResourceContents {
 
 const STATIC_RESOURCES: Resource[] = [
   {
-    uri: "vaultbase://collections",
+    uri: "cogworks://collections",
     name: "Collections list",
     description: "All collections in this deployment with type + history flag.",
     mimeType: "application/json",
   },
   {
-    uri: "vaultbase://audit/recent",
+    uri: "cogworks://audit/recent",
     name: "Recent audit log",
     description: "Last 50 audit entries (admin actions).",
     mimeType: "application/json",
   },
   {
-    uri: "vaultbase://settings",
+    uri: "cogworks://settings",
     name: "Settings",
     description: "Non-secret runtime settings. Encrypted keys are masked.",
     mimeType: "application/json",
   },
   {
-    uri: "vaultbase://server/info",
+    uri: "cogworks://server/info",
     name: "Server info",
-    description: "Vaultbase version, MCP protocol version, capability summary.",
+    description: "Cogworks version, MCP protocol version, capability summary.",
     mimeType: "application/json",
   },
 ];
 
 const TEMPLATES: ResourceTemplate[] = [
   {
-    uriTemplate: "vaultbase://collection/{name}",
+    uriTemplate: "cogworks://collection/{name}",
     name: "Single collection schema",
     description: "Full schema (fields + rules) for one collection.",
     mimeType: "application/json",
   },
   {
-    uriTemplate: "vaultbase://record/{collection}/{id}",
+    uriTemplate: "cogworks://record/{collection}/{id}",
     name: "Single record",
     description: "One record by id; collection rules apply.",
     mimeType: "application/json",
   },
   {
-    uriTemplate: "vaultbase://logs/{date}",
+    uriTemplate: "cogworks://logs/{date}",
     name: "Daily request logs",
     description: "Structured JSONL logs for YYYY-MM-DD.",
     mimeType: "application/json",
@@ -118,36 +118,36 @@ export async function readResource(uri: string, ctx: ToolContext): Promise<Resou
   }
 
   switch (uri) {
-    case "vaultbase://collections":
+    case "cogworks://collections":
       return jsonContents(uri, await readCollectionsList());
-    case "vaultbase://audit/recent":
+    case "cogworks://audit/recent":
       return jsonContents(uri, await readRecentAudit());
-    case "vaultbase://settings":
+    case "cogworks://settings":
       return jsonContents(uri, readSettingsResource());
-    case "vaultbase://server/info":
+    case "cogworks://server/info":
       return jsonContents(uri, readServerInfo());
   }
 
   // Templated URIs ─ match longest-prefix-first to avoid ambiguity.
-  if (uri.startsWith("vaultbase://collection/")) {
-    const name = uri.slice("vaultbase://collection/".length);
+  if (uri.startsWith("cogworks://collection/")) {
+    const name = uri.slice("cogworks://collection/".length);
     if (!name) throw new Error("Missing collection name in URI");
     return jsonContents(uri, await readCollectionSchema(name));
   }
 
-  if (uri.startsWith("vaultbase://record/")) {
-    const rest = uri.slice("vaultbase://record/".length);
+  if (uri.startsWith("cogworks://record/")) {
+    const rest = uri.slice("cogworks://record/".length);
     const slash = rest.indexOf("/");
     if (slash < 1 || slash === rest.length - 1) {
-      throw new Error("Record URI must be vaultbase://record/{collection}/{id}");
+      throw new Error("Record URI must be cogworks://record/{collection}/{id}");
     }
     const collection = rest.slice(0, slash);
     const id = rest.slice(slash + 1);
     return jsonContents(uri, await readSingleRecord(collection, id, ctx));
   }
 
-  if (uri.startsWith("vaultbase://logs/")) {
-    const date = uri.slice("vaultbase://logs/".length);
+  if (uri.startsWith("cogworks://logs/")) {
+    const date = uri.slice("cogworks://logs/".length);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       throw new Error("Logs URI date must be YYYY-MM-DD");
     }
@@ -227,7 +227,7 @@ function readSettingsResource(): unknown {
 function readServerInfo(): unknown {
   return {
     name: "cogworks",
-    version: VAULTBASE_VERSION,
+    version: COGWORKS_VERSION,
     protocol: MCP_PROTOCOL_VERSION,
     capabilities: ["tools", "resources", "prompts"],
   };

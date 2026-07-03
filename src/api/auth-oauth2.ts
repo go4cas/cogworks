@@ -150,7 +150,7 @@ export function makeAuthOauth2Plugin(jwtSecret: string) {
           return c.json({ error: e instanceof Error ? e.message : String(e), code: 422 }, 422);
         }
       })
-      // Exchange authorization code for a vaultbase JWT.
+      // Exchange authorization code for a cogworks JWT.
       // Linking strategy:
       //  1. Existing oauth_link row for (provider, provider_user_id) → log in linked user
       //  2. Otherwise, if profile.emailVerified and email matches an existing user in

@@ -21,7 +21,7 @@ import {
 let tmpDir: string;
 
 beforeEach(async () => {
-  tmpDir = mkdtempSync(join(tmpdir(), "vaultbase-queues-"));
+  tmpDir = mkdtempSync(join(tmpdir(), "cogworks-queues-"));
   setLogsDir(tmpDir);
   initDb(":memory:");
   await runMigrations();

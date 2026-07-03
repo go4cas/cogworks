@@ -1,7 +1,7 @@
 /**
- * `vaultbase wipe` — delete the data directory.
+ * `cogworks wipe` — delete the data directory.
  *
- * Designed for dev / testing — hard-resets a vaultbase install back to a
+ * Designed for dev / testing — hard-resets a cogworks install back to a
  * fresh-setup state. Wipes the SQLite DB (+ WAL/SHM siblings), uploads,
  * logs, sandboxes, JWT secret, and encryption key. Next boot triggers
  * the setup-admin wizard.
@@ -10,7 +10,7 @@
  *
  *   - Requires `--yes` to actually delete. Without it, the script does a
  *     dry-run that prints what *would* be deleted and exits 0.
- *   - Detects production signals (NODE_ENV / VAULTBASE_ENV / dataDir
+ *   - Detects production signals (NODE_ENV / COGWORKS_ENV / dataDir
  *     paths typical of system-managed installs). On a hit, the script
  *     refuses to run unless `--force` is passed alongside `--yes`.
  *   - Reports the row counts in `cogworks_users` + `cogworks_admin` +
@@ -41,9 +41,9 @@ function parseArgs(argv: readonly string[]): WipeFlags {
   return out;
 }
 
-const HELP = `Usage: vaultbase wipe [--yes] [--force]
+const HELP = `Usage: cogworks wipe [--yes] [--force]
 
-Hard-reset a vaultbase install: delete the data directory entirely. Next
+Hard-reset a cogworks install: delete the data directory entirely. Next
 boot triggers the setup-admin wizard.
 
 Wipes:
@@ -62,9 +62,9 @@ Flags:
   --help, -h     Show this help.
 
 Examples:
-  vaultbase wipe                   # dry-run; reports what would be deleted
-  vaultbase wipe --yes             # delete (refuses on detected production)
-  vaultbase wipe --yes --force     # delete unconditionally
+  cogworks wipe                   # dry-run; reports what would be deleted
+  cogworks wipe --yes             # delete (refuses on detected production)
+  cogworks wipe --yes --force     # delete unconditionally
 `;
 
 interface PathInfo {
@@ -173,9 +173,9 @@ function summarizeDb(dbPath: string): DbSummary | null {
 function detectProductionSignals(dataDir: string): string[] {
   const reasons: string[] = [];
   const env = process.env.NODE_ENV;
-  const vbEnv = process.env.VAULTBASE_ENV;
+  const vbEnv = process.env.COGWORKS_ENV;
   if (env === "production") reasons.push(`NODE_ENV=${env}`);
-  if (vbEnv === "production" || vbEnv === "prod") reasons.push(`VAULTBASE_ENV=${vbEnv}`);
+  if (vbEnv === "production" || vbEnv === "prod") reasons.push(`COGWORKS_ENV=${vbEnv}`);
   // Path heuristics: system-managed dirs typical of prod deploys.
   const abs = dataDir.replace(/\\/g, "/");
   if (/^\/var\/(lib|opt)\//.test(abs)) reasons.push(`dataDir under /var/(lib|opt)/`);
@@ -211,7 +211,7 @@ export function runWipeCli(argv: readonly string[], dataDir: string): number {
     return 0;
   }
 
-  process.stdout.write(`vaultbase wipe — target dataDir: ${dataDir}\n\n`);
+  process.stdout.write(`cogworks wipe — target dataDir: ${dataDir}\n\n`);
 
   if (!existsSync(dataDir)) {
     process.stdout.write(`✓ dataDir doesn't exist — nothing to wipe.\n`);
@@ -282,7 +282,7 @@ export function runWipeCli(argv: readonly string[], dataDir: string): number {
     }
   }
   process.stdout.write(
-    `\n✓ Wipe complete — ${removed}/${present.length} target(s) removed. Restart vaultbase to enter the setup wizard.\n`,
+    `\n✓ Wipe complete — ${removed}/${present.length} target(s) removed. Restart cogworks to enter the setup wizard.\n`,
   );
   return 0;
 }

@@ -402,7 +402,7 @@ function Editor({
             </div>
             <div style={{ flex: 2 }}>
               <VbField label="URL">
-                <VbInput mono value={draft.url} onChange={(e) => patch({ url: e.target.value })} placeholder="https://api.example.com/webhooks/vaultbase" />
+                <VbInput mono value={draft.url} onChange={(e) => patch({ url: e.target.value })} placeholder="https://api.example.com/webhooks/cogworks" />
               </VbField>
             </div>
           </div>
@@ -420,7 +420,7 @@ function Editor({
 
           <div>
             <VbField label="HMAC secret" hint={
-              <>Sent as <Code>X-Vaultbase-Signature: sha256=&lt;hmac&gt;</Code>. Receivers verify with <Code>hmac(secret, "&lt;timestamp&gt;.&lt;body&gt;")</Code>.</>
+              <>Sent as <Code>X-Cogworks-Signature: sha256=&lt;hmac&gt;</Code>. Receivers verify with <Code>hmac(secret, "&lt;timestamp&gt;.&lt;body&gt;")</Code>.</>
             }>
               <div style={{ display: "flex", gap: 8 }}>
                 <div style={{ flex: 1 }}>

@@ -1,4 +1,4 @@
-# Vaultbase reverse-proxy + automatic HTTPS via Caddy.
+# Cogworks reverse-proxy + automatic HTTPS via Caddy.
 #
 #   apt install caddy   # or: snap install caddy
 #   sudo cp Caddyfile /etc/caddy/Caddyfile
@@ -31,7 +31,7 @@ api.example.com {
     }
 
     log {
-        output file /var/log/caddy/vaultbase-access.log
+        output file /var/log/caddy/cogworks-access.log
         format console
     }
 }

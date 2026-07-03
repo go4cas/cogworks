@@ -1,12 +1,12 @@
 /**
- * `vaultbase wipe` — verifies the script:
+ * `cogworks wipe` — verifies the script:
  *   - dry-runs by default (no --yes)
  *   - refuses on production signals (NODE_ENV=production etc.)
  *   - actually deletes when --yes is passed
  *   - --force overrides the production refusal
  *
  * Hits real fs paths under a tmp dir; never touches the real
- * vaultbase install.
+ * cogworks install.
  */
 import { describe, expect, it, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync, existsSync } from "node:fs";
@@ -57,12 +57,12 @@ function seedDataDir(): void {
 }
 
 beforeEach(() => {
-  dataDir = mkdtempSync(join(tmpdir(), "vaultbase-wipe-test-"));
+  dataDir = mkdtempSync(join(tmpdir(), "cogworks-wipe-test-"));
   origNodeEnv = process.env.NODE_ENV;
-  origVbEnv = process.env.VAULTBASE_ENV;
+  origVbEnv = process.env.COGWORKS_ENV;
   origK8s = process.env.KUBERNETES_SERVICE_HOST;
   delete process.env.NODE_ENV;
-  delete process.env.VAULTBASE_ENV;
+  delete process.env.COGWORKS_ENV;
   delete process.env.KUBERNETES_SERVICE_HOST;
 });
 
@@ -70,8 +70,8 @@ afterEach(() => {
   restoreStdio();
   if (origNodeEnv === undefined) delete process.env.NODE_ENV;
   else process.env.NODE_ENV = origNodeEnv;
-  if (origVbEnv === undefined) delete process.env.VAULTBASE_ENV;
-  else process.env.VAULTBASE_ENV = origVbEnv;
+  if (origVbEnv === undefined) delete process.env.COGWORKS_ENV;
+  else process.env.COGWORKS_ENV = origVbEnv;
   if (origK8s === undefined) delete process.env.KUBERNETES_SERVICE_HOST;
   else process.env.KUBERNETES_SERVICE_HOST = origK8s;
   try {
@@ -81,7 +81,7 @@ afterEach(() => {
   }
 });
 
-describe("vaultbase wipe", () => {
+describe("cogworks wipe", () => {
   it("dry-run reports targets but doesn't delete", () => {
     seedDataDir();
     captureStdio();
@@ -119,9 +119,9 @@ describe("vaultbase wipe", () => {
     expect(existsSync(join(dataDir, "data.db"))).toBe(true);
   });
 
-  it("refuses --yes when VAULTBASE_ENV=prod (no --force)", () => {
+  it("refuses --yes when COGWORKS_ENV=prod (no --force)", () => {
     seedDataDir();
-    process.env.VAULTBASE_ENV = "prod";
+    process.env.COGWORKS_ENV = "prod";
     captureStdio();
     const code = runWipeCli(["--yes"], dataDir);
     restoreStdio();
@@ -163,6 +163,6 @@ describe("vaultbase wipe", () => {
     const code = runWipeCli(["--help"], dataDir);
     restoreStdio();
     expect(code).toBe(0);
-    expect(stdout.join("")).toContain("Usage: vaultbase wipe");
+    expect(stdout.join("")).toContain("Usage: cogworks wipe");
   });
 });

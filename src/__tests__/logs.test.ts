@@ -8,7 +8,7 @@ import { insertLog, listLogs } from "../api/logs.ts";
 let tmpDir: string;
 
 beforeEach(() => {
-  tmpDir = mkdtempSync(join(tmpdir(), "vaultbase-logs-"));
+  tmpDir = mkdtempSync(join(tmpdir(), "cogworks-logs-"));
   setLogsDir(tmpDir);
 });
 

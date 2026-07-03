@@ -121,7 +121,7 @@ export async function runSql(opts: RunSqlOptions): Promise<RunSqlResult> {
         truncated: false,
         durationMs: Date.now() - start,
         error: `${bad} statements are blocked in read-only mode. Switch to sandbox to run them safely.`,
-        errorCode: "VAULTBASE_READONLY",
+        errorCode: "COGWORKS_READONLY",
       };
     }
   }
@@ -144,7 +144,7 @@ export async function runSql(opts: RunSqlOptions): Promise<RunSqlResult> {
           truncated: false,
           durationMs: Date.now() - start,
           error: "adminId is required for sandbox mode",
-          errorCode: "VAULTBASE_NO_SANDBOX",
+          errorCode: "COGWORKS_NO_SANDBOX",
         };
       }
       const sb = getSandboxDb(opts.adminId);
@@ -157,7 +157,7 @@ export async function runSql(opts: RunSqlOptions): Promise<RunSqlResult> {
           truncated: false,
           durationMs: Date.now() - start,
           error: "Sandbox not initialised — reset the sandbox first.",
-          errorCode: "VAULTBASE_NO_SANDBOX",
+          errorCode: "COGWORKS_NO_SANDBOX",
         };
       }
       db = sb;

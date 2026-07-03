@@ -45,7 +45,7 @@ function bootstrapMonaco() {
 }
 
 function defineTheme() {
-  monaco.editor.defineTheme("vaultbase-dark", {
+  monaco.editor.defineTheme("cogworks-dark", {
     base: "vs-dark",
     inherit: true,
     rules: [
@@ -85,7 +85,7 @@ function defineTheme() {
     },
   });
   // Make this the default theme so even briefly-shown editors are dark
-  monaco.editor.setTheme("vaultbase-dark");
+  monaco.editor.setTheme("cogworks-dark");
 }
 
 // Monaco's TS service runtime API works but its public d.ts marks it deprecated.
@@ -393,7 +393,7 @@ interface WorkerContext {
   attempt: number;
   /** Queue name this job came from */
   queue: string;
-  /** Job id (matches the row in vaultbase_jobs_log) */
+  /** Job id (matches the row in cogworks_jobs_log) */
   jobId: string;
   /** Helper utilities (same as hook helpers) */
   helpers: HookHelpers;
@@ -545,7 +545,7 @@ function columnDetail(t: NormalisedTable, col: SqlColumn): string {
 function tableDetail(t: NormalisedTable): string {
   const tags: string[] = [t.type];
   if (t.kind === "collection") tags.push("collection");
-  else if (t.kind === "system") tags.push("vaultbase");
+  else if (t.kind === "system") tags.push("cogworks");
   else if (t.kind === "sqlite") tags.push("sqlite");
   if (typeof t.rowCount === "number") tags.push(`${t.rowCount} rows`);
   return tags.join(" · ");
@@ -555,7 +555,7 @@ function tableHoverMd(t: NormalisedTable): string {
   const lines: string[] = [];
   const tags: string[] = [t.type];
   if (t.kind === "collection" && t.collectionName) tags.push(`collection \`${t.collectionName}\``);
-  else if (t.kind === "system") tags.push("vaultbase system");
+  else if (t.kind === "system") tags.push("cogworks system");
   else if (t.kind === "sqlite") tags.push("sqlite internal");
   lines.push(`**${t.name}** — ${tags.join(" · ")}`);
   if (typeof t.rowCount === "number") lines.push(`\n${t.rowCount} row${t.rowCount === 1 ? "" : "s"}\n`);
@@ -945,7 +945,7 @@ export function CodeEditor({
       : routeContext
       ? buildRouteCtxDecl()
       : buildCtxDecl(hookCollectionName, hookFields);
-    disposableRef.current = ts.javascriptDefaults.addExtraLib(decl, "vaultbase-ctx.d.ts");
+    disposableRef.current = ts.javascriptDefaults.addExtraLib(decl, "cogworks-ctx.d.ts");
     return () => {
       disposableRef.current?.dispose();
       disposableRef.current = null;
@@ -964,7 +964,7 @@ export function CodeEditor({
     if (!editor) return;
     const model = editor.getModel();
     if (!model) return;
-    const owner = "vaultbase-sql";
+    const owner = "cogworks-sql";
     if (!markers || markers.length === 0) {
       monaco.editor.setModelMarkers(model, owner, []);
       return;
@@ -994,12 +994,12 @@ export function CodeEditor({
   const handleBeforeMount: BeforeMount = (m) => {
     // Make sure the bundled monaco's theme is applied even if the editor instance
     // somehow ended up using the loader-fetched one.
-    m.editor.setTheme("vaultbase-dark");
+    m.editor.setTheme("cogworks-dark");
   };
 
   const handleMount: OnMount = (editor, m) => {
     editorRef.current = editor;
-    m.editor.setTheme("vaultbase-dark");
+    m.editor.setTheme("cogworks-dark");
     if (!statusStrip) return;
     editor.onDidChangeCursorPosition((e) => {
       setCursor({ line: e.position.lineNumber, col: e.position.column });
@@ -1043,7 +1043,7 @@ export function CodeEditor({
         onChange={(v) => onChange(v ?? "")}
         beforeMount={handleBeforeMount}
         onMount={handleMount}
-        theme="vaultbase-dark"
+        theme="cogworks-dark"
         loading={
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--text-muted)", fontSize: 12, background: "#1f1f1f" }}>
             Loading editor…

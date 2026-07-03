@@ -1,7 +1,7 @@
 import React from "react";
 
 /**
- * Vaultbase brand mark — hexagonal vault, three-quarters view.
+ * Cogworks brand mark — hexagonal vault, three-quarters view.
  * Drawn on a 32-unit grid. All colors resolve from theme tokens so an
  * operator who reskins the admin via Settings → Theme (override of
  * `--accent`, `--accent-light`, `--bg-app`, `--text-primary`) gets a logo
@@ -13,7 +13,7 @@ import React from "react";
  *   spine           → --bg-app (page bg, gives a "carved" look)
  *   chevron         → --text-primary
  */
-export const VaultbaseLogo: React.FC<{ size?: number; style?: React.CSSProperties }> = ({
+export const CogworksLogo: React.FC<{ size?: number; style?: React.CSSProperties }> = ({
   size = 22,
   style,
 }) => (
@@ -23,7 +23,7 @@ export const VaultbaseLogo: React.FC<{ size?: number; style?: React.CSSPropertie
     viewBox="0 0 32 32"
     fill="none"
     style={style}
-    aria-label="Vaultbase"
+    aria-label="Cogworks"
     role="img"
   >
     <path
@@ -54,4 +54,4 @@ export const VaultbaseLogo: React.FC<{ size?: number; style?: React.CSSPropertie
   </svg>
 );
 
-export default VaultbaseLogo;
+export default CogworksLogo;

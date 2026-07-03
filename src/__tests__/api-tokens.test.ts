@@ -1,6 +1,6 @@
 /**
  * API tokens — mint / verify / revoke / scope-check + extractBearer
- * vbat_-prefix handling.
+ * cwat_-prefix handling (accepts legacy vbat_ too).
  */
 import { describe, expect, it, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
@@ -40,7 +40,7 @@ async function seedAdmin(): Promise<{ id: string; email: string }> {
 }
 
 beforeEach(async () => {
-  tmpDir = mkdtempSync(join(tmpdir(), "vaultbase-api-tokens-"));
+  tmpDir = mkdtempSync(join(tmpdir(), "cogworks-api-tokens-"));
   setLogsDir(tmpDir);
   initDb(":memory:");
   await runMigrations();
@@ -52,7 +52,7 @@ afterEach(() => {
 });
 
 describe("mintApiToken", () => {
-  it("returns a vbat_-prefixed token + matching DB row", async () => {
+  it("returns a cwat_-prefixed token + matching DB row", async () => {
     const me = await seedAdmin();
     const r = await mintApiToken(
       {
@@ -63,7 +63,7 @@ describe("mintApiToken", () => {
       },
       SECRET,
     );
-    expect(r.token.startsWith("vbat_")).toBe(true);
+    expect(r.token.startsWith("cwat_")).toBe(true);
     expect(r.id.length).toBeGreaterThan(10);
     expect(r.expires_at).toBeGreaterThan(Math.floor(Date.now() / 1000));
 
@@ -269,7 +269,7 @@ describe("extractBearer", () => {
     expect(isApiTokenFormat(t)).toBe(true);
     expect(stripApiTokenPrefix(t)).toBe("xyz.abc.123");
     expect(stripApiTokenPrefix("xyz.abc.123")).toBe("xyz.abc.123");
-    expect(API_TOKEN_PREFIX).toBe("vbat_");
+    expect(API_TOKEN_PREFIX).toBe("cwat_");
   });
 });
 

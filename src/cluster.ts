@@ -1,5 +1,5 @@
 /**
- * Cluster mode — multi-process Vaultbase via SO_REUSEPORT.
+ * Cluster mode — multi-process Cogworks via SO_REUSEPORT.
  *
  * Single Bun process is single-threaded — saturates one core at ~7-13K rps.
  * Cluster mode spawns N worker processes that all bind the same port via
@@ -10,7 +10,7 @@
  * Usage:
  *
  *   bun src/cluster.ts                    # auto: one worker per CPU core
- *   VAULTBASE_WORKERS=4 bun src/cluster.ts
+ *   COGWORKS_WORKERS=4 bun src/cluster.ts
  *
  * SQLite strategy (Phase 6a — ship first):
  *   All workers open the same DB file. WAL mode allows concurrent readers
@@ -31,6 +31,7 @@
  *   shutdown (handled by `src/index.ts`).
  */
 
+import "./core/env-compat.ts";
 import { availableParallelism } from "node:os";
 import type { Subprocess } from "bun";
 
@@ -40,18 +41,18 @@ interface WorkerHandle {
   startedAt: number;
 }
 
-const N = parseInt(process.env.VAULTBASE_WORKERS ?? String(availableParallelism()), 10);
+const N = parseInt(process.env.COGWORKS_WORKERS ?? String(availableParallelism()), 10);
 
 if (!Number.isFinite(N) || N < 1) {
   process.stderr.write(
-    `vaultbase-cluster: VAULTBASE_WORKERS must be a positive integer (got ${process.env.VAULTBASE_WORKERS})\n`,
+    `cogworks-cluster: COGWORKS_WORKERS must be a positive integer (got ${process.env.COGWORKS_WORKERS})\n`,
   );
   process.exit(1);
 }
 
 if (N === 1) {
   process.stderr.write(
-    `vaultbase-cluster: only 1 worker requested — running directly without cluster overhead\n`,
+    `cogworks-cluster: only 1 worker requested — running directly without cluster overhead\n`,
   );
 }
 
@@ -61,7 +62,7 @@ const SHUTDOWN_TIMEOUT_MS = 30_000;
 
 /**
  * Pick the right command to spawn a worker. Two cases:
- *   - Compiled binary deploy (`vaultbase cluster` from /usr/local/bin): the
+ *   - Compiled binary deploy (`cogworks cluster` from /usr/local/bin): the
  *     parent IS the binary; spawn `process.execPath` directly so the worker
  *     also runs the binary (no Bun runtime needed at the spawn site).
  *   - Source-tree dev (`bun src/cluster.ts`): spawn `bun src/index.ts`.
@@ -73,7 +74,7 @@ function workerCmd(): string[] {
   // Bun sets `process.isBun` always; the compiled binary embeds Bun + the
   // user code, so `--bun` style flags aren't applicable. Use the binary
   // path directly for the compiled case.
-  const isCompiled = !process.argv[1] || /vaultbase(\.exe)?$/.test(process.execPath);
+  const isCompiled = !process.argv[1] || /cogworks(\.exe)?$/.test(process.execPath);
   if (isCompiled) return [process.execPath];
   return ["bun", "src/index.ts"];
 }
@@ -83,14 +84,14 @@ function spawnWorker(id: number): WorkerHandle {
     cmd: workerCmd(),
     env: {
       ...process.env,
-      VAULTBASE_WORKER_ID: String(id),
+      COGWORKS_WORKER_ID: String(id),
     },
     stdout: "inherit",
     stderr: "inherit",
     onExit(_p, exitCode, signalCode, error) {
       if (shuttingDown) return;
       const reason = error?.message ?? `exit=${exitCode} signal=${signalCode ?? ""}`;
-      process.stderr.write(`vaultbase-cluster: worker ${id} died (${reason}) — respawning in 1s\n`);
+      process.stderr.write(`cogworks-cluster: worker ${id} died (${reason}) — respawning in 1s\n`);
       setTimeout(() => {
         if (shuttingDown) return;
         const fresh = spawnWorker(id);
@@ -107,7 +108,7 @@ async function shutdown(signal: string): Promise<void> {
   if (shuttingDown) return;
   shuttingDown = true;
   process.stderr.write(
-    `\nvaultbase-cluster: received ${signal}, draining ${workers.length} worker(s)...\n`,
+    `\ncogworks-cluster: received ${signal}, draining ${workers.length} worker(s)...\n`,
   );
 
   // Forward the signal so children run their own graceful drain (file logger,
@@ -149,8 +150,8 @@ process.on("SIGINT", () => {
   void shutdown("SIGINT");
 });
 
-process.stderr.write(`vaultbase-cluster: spawning ${N} worker(s)...\n`);
+process.stderr.write(`cogworks-cluster: spawning ${N} worker(s)...\n`);
 for (let i = 0; i < N; i++) {
   workers.push(spawnWorker(i));
 }
-process.stderr.write(`vaultbase-cluster: ${N} workers up. Health check: GET /_/health\n`);
+process.stderr.write(`cogworks-cluster: ${N} workers up. Health check: GET /_/health\n`);

@@ -51,7 +51,7 @@ async function seedAdmin(id = "a1"): Promise<{ id: string; email: string }> {
 }
 
 beforeEach(async () => {
-  tmpDir = mkdtempSync(join(tmpdir(), "vaultbase-sql-"));
+  tmpDir = mkdtempSync(join(tmpdir(), "cogworks-sql-"));
   setLogsDir(tmpDir);
   setSandboxDir(join(tmpDir, "sandboxes"));
   dbPath = join(tmpDir, "data.db");
@@ -121,7 +121,7 @@ describe("runSql — read-only mode", () => {
       dbPath,
     });
     expect(res.ok).toBe(false);
-    expect(res.errorCode).toBe("VAULTBASE_READONLY");
+    expect(res.errorCode).toBe("COGWORKS_READONLY");
     expect(res.error).toContain("INSERT");
   });
 
@@ -164,7 +164,7 @@ describe("runSql — sandbox mode", () => {
       dbPath,
     });
     expect(res.ok).toBe(false);
-    expect(res.errorCode).toBe("VAULTBASE_NO_SANDBOX");
+    expect(res.errorCode).toBe("COGWORKS_NO_SANDBOX");
 
     const res2 = await runSql({
       sql: "SELECT 1",
@@ -173,7 +173,7 @@ describe("runSql — sandbox mode", () => {
       adminId: "no-sandbox-yet",
     });
     expect(res2.ok).toBe(false);
-    expect(res2.errorCode).toBe("VAULTBASE_NO_SANDBOX");
+    expect(res2.errorCode).toBe("COGWORKS_NO_SANDBOX");
   });
 
   it("allows mutations and isolates them from live DB", async () => {

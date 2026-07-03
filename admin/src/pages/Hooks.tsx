@@ -62,7 +62,7 @@ const WORKER_TEMPLATE = `// Worker — processes jobs from a named queue.
 //   ctx.payload  — the enqueued payload (JSON-decoded)
 //   ctx.attempt  — 1-indexed attempt (incremented on retry)
 //   ctx.queue    — queue name
-//   ctx.jobId    — job id (vaultbase_jobs_log row)
+//   ctx.jobId    — job id (cogworks_jobs_log row)
 //   ctx.helpers  — slug, abort, find, query, fetch, log, email, enqueue,
 //                  recordRule
 
