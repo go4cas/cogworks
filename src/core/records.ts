@@ -164,6 +164,12 @@ export interface ListOptions {
   auth?: AuthContext | null;
   /** Full-text query (FTS5 MATCH) — applied when the collection has searchable fields. */
   search?: string;
+  /**
+   * Keyset (cursor) pagination. When defined, switches off OFFSET + COUNT and
+   * seeks by (sort-key, id): `""` = first page, else an opaque cursor from a
+   * prior `nextCursor`. Requires a single sort column (default `created_at`).
+   */
+  cursor?: string;
 }
 
 export interface ListResult {
@@ -172,6 +178,33 @@ export interface ListResult {
   perPage: number;
   totalItems: number;
   totalPages: number;
+  /** Keyset mode only: cursor for the next page, or null when exhausted. */
+  nextCursor?: string | null;
+}
+
+/** Thrown when a keyset (`cursor`) request is malformed — surfaced as HTTP 400. */
+export class KeysetError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "KeysetError";
+  }
+}
+
+/** Opaque cursor = base64url(JSON of the last row's sort value + id). */
+function encodeCursor(v: unknown, id: string): string {
+  return Buffer.from(JSON.stringify({ v, id })).toString("base64url");
+}
+function decodeCursor(s: string): { v: unknown; id: string } | null {
+  try {
+    const o = JSON.parse(Buffer.from(s, "base64url").toString("utf8")) as {
+      v: unknown;
+      id: unknown;
+    };
+    if (o && typeof o.id === "string") return { v: o.v, id: o.id };
+  } catch {
+    /* malformed */
+  }
+  return null;
 }
 
 export interface RecordWithMeta {
@@ -362,7 +395,7 @@ export async function listRecords(
     ...fields.filter((f) => !f.system).map((f) => f.name),
   ]);
   const sortSpec = opts.sort ?? (col.type === "view" ? "" : "-created_at");
-  const orderClauses: string[] = [];
+  const sortClauses: Array<{ col: string; desc: boolean }> = [];
   for (const s of sortSpec
     .split(",")
     .map((x) => x.trim())
@@ -378,28 +411,76 @@ export async function listRecords(
     // match a SQL identifier regex. Whitelist covers it for non-view, this
     // is the view-collection-fallback safety net.
     if (!/^[A-Za-z_][A-Za-z0-9_]{0,62}$/.test(colName)) continue;
-    orderClauses.push(`${tableRef}.${quoteIdent(colName)} ${desc ? "DESC" : "ASC"}`);
+    sortClauses.push({ col: colName, desc });
   }
-  const orderSql = orderClauses.length > 0 ? `ORDER BY ${orderClauses.join(", ")}` : "";
+  const orderby = (clauses: Array<{ col: string; desc: boolean }>) =>
+    clauses.length > 0
+      ? `ORDER BY ${clauses.map((k) => `${tableRef}.${quoteIdent(k.col)} ${k.desc ? "DESC" : "ASC"}`).join(", ")}`
+      : "";
 
-  // Execute SELECT — prepared statement cached by SQL string shape.
-  const selectSql = `SELECT * FROM ${tableRef} ${whereSql} ${orderSql} LIMIT ? OFFSET ?`;
-  const rows = preparedAll(client, selectSql, [...whereParams, perPage, offset]) as Record<
-    string,
-    unknown
-  >[];
-
-  // Total count (optional)
+  let items: RecordWithMeta[];
   let totalItems = -1;
   let totalPages = -1;
-  if (!opts.skipTotal) {
-    const countSql = `SELECT COUNT(*) AS c FROM ${tableRef} ${whereSql}`;
-    const cnt = preparedGet(client, countSql, whereParams) as { c: number } | undefined;
-    totalItems = cnt?.c ?? 0;
-    totalPages = Math.ceil(totalItems / perPage);
-  }
+  let nextCursor: string | null | undefined;
 
-  let items = await Promise.all(rows.map((r) => rowToMetaAsync(r, col, fields)));
+  if (opts.cursor !== undefined) {
+    // ── Keyset (cursor) pagination — O(log n) seek, no OFFSET / COUNT ────────
+    if (sortClauses.length === 0) throw new KeysetError("keyset pagination requires a sort column");
+    if (sortClauses.length > 1)
+      throw new KeysetError("keyset pagination supports a single sort column");
+    const primary = sortClauses[0]!;
+    // Append id as a unique tiebreaker so the order is total (stable paging).
+    const keyClauses =
+      primary.col === "id" ? [primary] : [primary, { col: "id", desc: primary.desc }];
+
+    const ksParts = [...whereParts];
+    const ksParams = [...whereParams];
+    if (opts.cursor !== "") {
+      const cur = decodeCursor(opts.cursor);
+      if (!cur) throw new KeysetError("invalid cursor");
+      const cmp = primary.desc ? "<" : ">";
+      const idRef = `${tableRef}."id"`;
+      if (primary.col === "id") {
+        ksParts.push(`${idRef} ${cmp} ?`);
+        ksParams.push(cur.id as Binding);
+      } else {
+        const pcol = `${tableRef}.${quoteIdent(primary.col)}`;
+        // Row-value seek: strictly past (v, id) in the sort direction.
+        ksParts.push(`(${pcol} ${cmp} ? OR (${pcol} = ? AND ${idRef} ${cmp} ?))`);
+        ksParams.push(cur.v as Binding, cur.v as Binding, cur.id as Binding);
+      }
+    }
+    const ksWhere = ksParts.length > 0 ? `WHERE ${ksParts.join(" AND ")}` : "";
+    // Fetch one extra to know whether a next page exists.
+    const rows = preparedAll(
+      client,
+      `SELECT * FROM ${tableRef} ${ksWhere} ${orderby(keyClauses)} LIMIT ?`,
+      [...ksParams, perPage + 1],
+    ) as Record<string, unknown>[];
+    const hasMore = rows.length > perPage;
+    const pageRows = hasMore ? rows.slice(0, perPage) : rows;
+    items = await Promise.all(pageRows.map((r) => rowToMetaAsync(r, col, fields)));
+    if (hasMore) {
+      const last = pageRows[pageRows.length - 1]!;
+      nextCursor = encodeCursor(last[primary.col], String(last.id));
+    } else {
+      nextCursor = null;
+    }
+  } else {
+    // ── Offset pagination (default; unchanged) ──────────────────────────────
+    const rows = preparedAll(
+      client,
+      `SELECT * FROM ${tableRef} ${whereSql} ${orderby(sortClauses)} LIMIT ? OFFSET ?`,
+      [...whereParams, perPage, offset],
+    ) as Record<string, unknown>[];
+    if (!opts.skipTotal) {
+      const countSql = `SELECT COUNT(*) AS c FROM ${tableRef} ${whereSql}`;
+      const cnt = preparedGet(client, countSql, whereParams) as { c: number } | undefined;
+      totalItems = cnt?.c ?? 0;
+      totalPages = Math.ceil(totalItems / perPage);
+    }
+    items = await Promise.all(rows.map((r) => rowToMetaAsync(r, col, fields)));
+  }
 
   // Expand
   if (opts.expand) {
@@ -419,7 +500,14 @@ export async function listRecords(
     items = items.map((it) => projectFields(it, keep));
   }
 
-  return { data: items, page, perPage, totalItems, totalPages };
+  return {
+    data: items,
+    page,
+    perPage,
+    totalItems,
+    totalPages,
+    ...(nextCursor !== undefined ? { nextCursor } : {}),
+  };
 }
 
 /** Safety bound on the vector candidate scan (settable via `vector.max_candidates`). */

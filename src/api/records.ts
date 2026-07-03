@@ -8,6 +8,7 @@ import {
   deleteRecord,
   getRecord,
   listRecords,
+  KeysetError,
   ReadOnlyCollectionError,
   RestrictError,
   updateRecord,
@@ -130,6 +131,7 @@ export function makeRecordsPlugin(jwtSecret: string) {
         const perPage = c.req.query("perPage");
         const filter = c.req.query("filter");
         const search = c.req.query("search");
+        const cursor = c.req.query("cursor");
         const sort = c.req.query("sort");
         const expand = c.req.query("expand");
         const fields = c.req.query("fields");
@@ -146,6 +148,7 @@ export function makeRecordsPlugin(jwtSecret: string) {
         };
         if (filter) opts.filter = filter;
         if (search) opts.search = search;
+        if (cursor !== undefined) opts.cursor = cursor; // "" = first keyset page
         if (sort) opts.sort = sort;
         if (expand) opts.expand = expand;
         if (fields) opts.fields = fields;
@@ -217,7 +220,21 @@ export function makeRecordsPlugin(jwtSecret: string) {
           });
         }
 
-        return c.json(await timeFor(request, "db_exec", () => listRecords(collection, opts)));
+        try {
+          const result = await timeFor(request, "db_exec", () => listRecords(collection, opts));
+          // Keyset mode returns a cursor instead of page/total (no COUNT run).
+          if (opts.cursor !== undefined) {
+            return c.json({
+              data: result.data,
+              perPage: result.perPage,
+              nextCursor: result.nextCursor ?? null,
+            });
+          }
+          return c.json(result);
+        } catch (e) {
+          if (e instanceof KeysetError) return c.json({ error: e.message, code: 400 }, 400);
+          throw e;
+        }
       })
       .get("/:collection/:id", async (c) => {
         const request = c.req.raw;
