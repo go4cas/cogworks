@@ -12,6 +12,8 @@ import {
 } from "./collections.ts";
 import { parseFilter, type CollectionLookup } from "./filter.ts";
 import { ftsMatchPredicate } from "./fts.ts";
+import { topK, parseVectorCached, setVectorCacheCap } from "./vector.ts";
+import { getSetting } from "../api/settings.ts";
 import { maybeRecordHistory } from "./record-history.ts";
 
 /**
@@ -418,6 +420,119 @@ export async function listRecords(
   }
 
   return { data: items, page, perPage, totalItems, totalPages };
+}
+
+/** Safety bound on the vector candidate scan (settable via `vector.max_candidates`). */
+function vectorMaxCandidates(): number {
+  const n = parseInt(getSetting("vector.max_candidates", "100000"), 10);
+  return Number.isFinite(n) && n > 0 ? n : 100_000;
+}
+
+/**
+ * K-nearest-neighbour search over a collection's vector field (cosine).
+ *
+ * Two-phase to avoid materializing full records for the whole candidate set:
+ *   1. Lean scan — select only `id + updated_at + <vector col>` under the same
+ *      filter/access scope as `listRecords`, parse via the vector cache (so
+ *      unchanged rows aren't re-parsed each query), and rank in-process.
+ *   2. Materialize only the top-K via `getRecord` (decryption/meta reuse),
+ *      attach `_score`, then apply expand/projection.
+ *
+ * `truncated` is true when the candidate set hit `vector.max_candidates` — the
+ * caller can surface it instead of silently under-returning (the old behavior).
+ */
+export async function vectorSearch(
+  collectionName: string,
+  fieldName: string,
+  queryVec: number[],
+  opts: ListOptions & { limit?: number; minScore?: number } = {},
+): Promise<{ data: RecordWithMeta[]; scanned: number; truncated: boolean }> {
+  const col = await getCollection(collectionName);
+  if (!col) throw new Error(`Collection '${collectionName}' not found`);
+  const fields = parseFields(col.fields);
+  const tname = userTableName(col.name);
+  const tableRef = quoteIdent(tname);
+  const client = rawClient();
+
+  // Same access scope as listRecords (filter + rule) — never rank hidden rows.
+  type Binding = string | number | bigint | boolean | null | Uint8Array;
+  const whereParts: string[] = [];
+  const whereParams: Binding[] = [];
+  const lookup = makeCollectionLookup();
+  const filterOpts = { auth: opts.auth ?? null, lookup, hostIdField: "id" } as const;
+  for (const expr of [opts.filter, opts.accessRule]) {
+    if (!expr) continue;
+    let compiled;
+    try {
+      compiled = parseFilter(expr, tname, filterOpts);
+    } catch {
+      compiled = null;
+    }
+    if (compiled) {
+      whereParts.push(compiled.sql);
+      whereParams.push(...(compiled.params as Binding[]));
+    }
+  }
+  const whereSql = whereParts.length > 0 ? `WHERE ${whereParts.join(" AND ")}` : "";
+
+  const cap = vectorMaxCandidates();
+  setVectorCacheCap(cap);
+  const cacheKey = `${col.name}:${fieldName}`;
+  // Fetch cap+1 to detect truncation. Only id + the vector column — never
+  // materialize full records for the whole candidate set.
+  const scanRows = preparedAll(
+    client,
+    `SELECT id, ${quoteIdent(fieldName)} AS __vec FROM ${tableRef} ${whereSql} LIMIT ?`,
+    [...whereParams, cap + 1],
+  ) as Array<{ id: string; __vec: unknown }>;
+  const truncated = scanRows.length > cap;
+  if (truncated) scanRows.length = cap;
+
+  const candidates: Array<{ id: string; vector: Float32Array }> = [];
+  for (const r of scanRows) {
+    if (typeof r.__vec !== "string") continue;
+    const vec = parseVectorCached(cacheKey, r.id, r.__vec);
+    if (vec) candidates.push({ id: r.id, vector: vec });
+  }
+
+  const ranked = topK({
+    query: Float32Array.from(queryVec),
+    candidates,
+    limit: opts.limit ?? 10,
+    ...(opts.minScore !== undefined ? { minScore: opts.minScore } : {}),
+  });
+
+  // Materialize only the winners, in ranked order.
+  const recs = await Promise.all(ranked.map((m) => getRecord(col.name, m.id)));
+  let items: RecordWithMeta[] = [];
+  const scores: number[] = [];
+  recs.forEach((rec, i) => {
+    if (rec) {
+      items.push(rec);
+      scores.push(ranked[i]!.score);
+    }
+  });
+
+  if (opts.expand) {
+    const paths = opts.expand
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    await expandRelations(items, paths, fields);
+  }
+  if (opts.fields) {
+    const keep = opts.fields
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    items = items.map((it) => projectFields(it, keep));
+  }
+  // Attach _score after projection so it survives a `fields` whitelist.
+  items.forEach((it, i) => {
+    (it as Record<string, unknown>)._score = scores[i];
+  });
+
+  return { data: items, scanned: scanRows.length, truncated };
 }
 
 function projectFields(item: RecordWithMeta, keep: string[]): RecordWithMeta {
