@@ -26,7 +26,7 @@ let tmpDir: string;
 let dbPath: string;
 
 beforeEach(async () => {
-  tmpDir = mkdtempSync(join(tmpdir(), "vaultbase-v011-"));
+  tmpDir = mkdtempSync(join(tmpdir(), "cogworks-v011-"));
   setLogsDir(tmpDir);
   dbPath = join(tmpDir, "data.db");
   initDb(dbPath);
@@ -263,7 +263,7 @@ describe("v0.11 — /register writes to cw_<col>", () => {
   });
 });
 
-describe("vaultbase doctor — pre-migration checks", () => {
+describe("cogworks doctor — pre-migration checks", () => {
   it("reports clean on a fresh install with no auth collections", async () => {
     closeDb();
     const r = runDoctor(dbPath);

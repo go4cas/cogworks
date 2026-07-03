@@ -3,8 +3,8 @@
  * surfaces. Phase-1 set; Phase-2 adds mutation tools (create_collection,
  * alter_collection, manage hooks etc.).
  *
- * v0.11 dropped `vaultbase.list_auth_users` — the auto-generated
- * `vaultbase.list_<auth-col>` per-collection tool covers it now.
+ * v0.11 dropped `cogworks.list_auth_users` — the auto-generated
+ * `cogworks.list_<auth-col>` per-collection tool covers it now.
  */
 import { getCollection, listCollections, parseFields } from "../core/collections.ts";
 import { listAuditEntries } from "../core/audit-log.ts";
@@ -16,9 +16,9 @@ export function registerAdminTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:read",
     definition: {
-      name: "vaultbase.list_collections",
+      name: "cogworks.list_collections",
       description:
-        "List every collection in this vaultbase deployment. Returns name, type (base / auth / view), creation timestamp, and whether record-history is on.",
+        "List every collection in this cogworks deployment. Returns name, type (base / auth / view), creation timestamp, and whether record-history is on.",
       inputSchema: { type: "object", properties: {}, additionalProperties: false },
     },
     handler: async () => {
@@ -40,7 +40,7 @@ export function registerAdminTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:read",
     definition: {
-      name: "vaultbase.describe_collection",
+      name: "cogworks.describe_collection",
       description:
         "Return the full schema of a single collection — field definitions (name, type, options), and the four CRUD rules (list/view/create/update/delete). Use this before constructing create/update tool calls so the LLM can satisfy validation.",
       inputSchema: {
@@ -76,9 +76,9 @@ export function registerAdminTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:read",
     definition: {
-      name: "vaultbase.read_logs",
+      name: "cogworks.read_logs",
       description:
-        "Read recent request logs (vaultbase's structured JSONL log files). Most recent first. Useful for debugging failing requests, tracing rule-eval outcomes, and seeing per-request timings.",
+        "Read recent request logs (cogworks's structured JSONL log files). Most recent first. Useful for debugging failing requests, tracing rule-eval outcomes, and seeing per-request timings.",
       inputSchema: {
         type: "object",
         properties: {
@@ -101,7 +101,7 @@ export function registerAdminTools(reg: ToolRegistry): void {
       const limit = typeof args.limit === "number" ? Math.min(args.limit, 1000) : 200;
       opts.limit = limit;
       const entries = await readLogs(opts);
-      return asUntrustedJsonText("vaultbase logs", entries);
+      return asUntrustedJsonText("cogworks logs", entries);
     },
   });
 
@@ -109,7 +109,7 @@ export function registerAdminTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:read",
     definition: {
-      name: "vaultbase.read_audit_log",
+      name: "cogworks.read_audit_log",
       description:
         "Query the admin audit log — append-only record of state-changing /admin/* requests. Filter by actor, action prefix, or time range. Useful for 'who deleted this collection three days ago' lookups and compliance audits.",
       inputSchema: {
@@ -142,7 +142,7 @@ export function registerAdminTools(reg: ToolRegistry): void {
       if (typeof args.page === "number") opts.page = args.page;
       if (typeof args.perPage === "number") opts.perPage = Math.min(args.perPage, 500);
       const r = await listAuditEntries(opts);
-      return asUntrustedJsonText("vaultbase audit log", r);
+      return asUntrustedJsonText("cogworks audit log", r);
     },
   });
 }

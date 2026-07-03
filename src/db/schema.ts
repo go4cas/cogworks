@@ -390,7 +390,7 @@ export const webhooks = sqliteTable("cogworks_webhooks", {
   url: text("url").notNull(),
   /** JSON array of event patterns: "<collection>.<verb>" or "*" or "<collection>.*". */
   events: text("events").notNull().default("[]"),
-  /** HMAC-SHA-256 signing key — sent in X-Vaultbase-Signature. */
+  /** HMAC-SHA-256 signing key — sent in X-Cogworks-Signature. */
   secret: text("secret").notNull(),
   enabled: integer("enabled").notNull().default(1),
   retry_max: integer("retry_max").notNull().default(3),

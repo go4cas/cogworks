@@ -18,7 +18,7 @@ const SECRET = "test-secret-file-token";
 let tmpDir: string;
 
 beforeEach(async () => {
-  tmpDir = mkdtempSync(join(tmpdir(), "vaultbase-file-token-"));
+  tmpDir = mkdtempSync(join(tmpdir(), "cogworks-file-token-"));
   setLogsDir(tmpDir);
   setUploadDir(tmpDir);
   initDb(":memory:");

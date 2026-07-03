@@ -1,7 +1,7 @@
 import React from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import Icon from "./Icon.tsx";
-import { VaultbaseLogo } from "./VaultbaseLogo.tsx";
+import { CogworksLogo } from "./CogworksLogo.tsx";
 import { useAuth } from "../stores/auth.ts";
 import { useVersion } from "../stores/version.ts";
 
@@ -9,7 +9,7 @@ interface NavItem { to: string; label: string; icon: string; end?: boolean }
 interface NavSection { label: string; items: NavItem[] }
 
 // Sidebar groupings — semantic, not feature-alphabetical. Per the
-// Notifications redesign handoff (vaultbase/project/shell.jsx).
+// Notifications redesign handoff (cogworks/project/shell.jsx).
 const SECTIONS: NavSection[] = [
   {
     label: "Data",
@@ -59,9 +59,9 @@ export const Sidebar: React.FC = () => {
     <aside className="sidebar">
       <div className="sb-brand">
         <span className="sb-brand-mark">
-          <VaultbaseLogo size={20} />
+          <CogworksLogo size={20} />
         </span>
-        <div className="sb-brand-name">vaultbase</div>
+        <div className="sb-brand-name">cogworks</div>
         {version && <div className="sb-brand-version mono">v{version}</div>}
       </div>
       {SECTIONS.map((sec) => (

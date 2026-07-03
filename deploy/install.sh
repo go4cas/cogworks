@@ -1,29 +1,29 @@
 #!/bin/sh
-# Vaultbase one-shot installer.
+# Cogworks one-shot installer.
 #
 # Downloads the appropriate prebuilt binary from GitHub releases, installs it
-# to /usr/local/bin, creates the `vaultbase` system user + data dir, drops a
+# to /usr/local/bin, creates the `cogworks` system user + data dir, drops a
 # hardened systemd unit, and starts the service.
 #
 # Usage:
 #
-#   curl -fsSL https://get.vaultbase.dev | sh
+#   curl -fsSL https://get.cogworks.dev | sh
 #
 #   # Pin a specific version
-#   curl -fsSL https://get.vaultbase.dev | sh -s -- --version v0.1.8
+#   curl -fsSL https://get.cogworks.dev | sh -s -- --version v0.1.8
 #
 #   # Override the listen port
-#   curl -fsSL https://get.vaultbase.dev | sh -s -- --port 9000
+#   curl -fsSL https://get.cogworks.dev | sh -s -- --port 9000
 #
 #   # Install but do not start (useful when running behind a reverse proxy
 #   # you want to configure first)
-#   curl -fsSL https://get.vaultbase.dev | sh -s -- --no-start
+#   curl -fsSL https://get.cogworks.dev | sh -s -- --no-start
 #
 #   # Verify cosign keyless signature before installing (requires `cosign`
 #   # on PATH — install from https://docs.sigstore.dev/cosign/installation/).
 #   # Confirms the binary was built and signed by the project's GitHub
 #   # Actions runner via the Sigstore Fulcio chain.
-#   curl -fsSL https://get.vaultbase.dev | sh -s -- --verify-sig
+#   curl -fsSL https://get.cogworks.dev | sh -s -- --verify-sig
 #
 # Re-running the script upgrades the binary in place. Existing data dir,
 # JWT secret, and admin accounts are preserved.
@@ -36,15 +36,15 @@
 set -eu
 
 # ── Defaults ────────────────────────────────────────────────────────────────
-REPO="vaultbase-sh/vaultbase"
+REPO="go4cas/cogworks"
 RELEASES_URL="https://github.com/${REPO}/releases"
 INSTALL_DIR="/usr/local/bin"
-DATA_DIR="/var/lib/vaultbase"
-ETC_DIR="/etc/vaultbase"
-ENV_FILE="${ETC_DIR}/vaultbase.env"
-UNIT_FILE="/etc/systemd/system/vaultbase.service"
-SVC_USER="vaultbase"
-SVC_GROUP="vaultbase"
+DATA_DIR="/var/lib/cogworks"
+ETC_DIR="/etc/cogworks"
+ENV_FILE="${ETC_DIR}/cogworks.env"
+UNIT_FILE="/etc/systemd/system/cogworks.service"
+SVC_USER="cogworks"
+SVC_GROUP="cogworks"
 DEFAULT_PORT="8091"
 
 VERSION=""
@@ -118,7 +118,7 @@ done
 if [ "${NO_SYSTEMD}" -eq 0 ]; then
     if [ ! -d /run/systemd/system ]; then
         warn "systemd not detected (no /run/systemd/system). Skipping unit install."
-        warn "You will need to run vaultbase under your own supervisor (runit, s6, supervisord, ...)."
+        warn "You will need to run cogworks under your own supervisor (runit, s6, supervisord, ...)."
         NO_SYSTEMD=1
     fi
 fi
@@ -143,7 +143,7 @@ else
 fi
 
 # Asset name pattern matches package.json's build script outputs.
-ASSET="vaultbase-${ARCH}"
+ASSET="cogworks-${ARCH}"
 URL="${RELEASES_URL}/download/${VERSION}/${ASSET}"
 SHA_URL="${URL}.sha256"
 SIG_URL="${URL}.sig"
@@ -156,18 +156,18 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "${TMP}"' EXIT INT TERM
 
 say "Fetching ${URL}..."
-curl -fsSL --retry 3 --retry-delay 2 -o "${TMP}/vaultbase" "${URL}" \
+curl -fsSL --retry 3 --retry-delay 2 -o "${TMP}/cogworks" "${URL}" \
     || die "Download failed. Check ${RELEASES_URL} for available assets and the network from this host."
 
 # Optional sha256 verification — works when the release ships a `.sha256`
 # alongside the binary (recommended, but tolerate absence so installs don't
 # break for older releases).
-if curl -fsSL --retry 2 -o "${TMP}/vaultbase.sha256" "${SHA_URL}" 2>/dev/null; then
-    EXPECTED="$(awk '{print $1}' "${TMP}/vaultbase.sha256")"
+if curl -fsSL --retry 2 -o "${TMP}/cogworks.sha256" "${SHA_URL}" 2>/dev/null; then
+    EXPECTED="$(awk '{print $1}' "${TMP}/cogworks.sha256")"
     if command -v sha256sum >/dev/null 2>&1; then
-        ACTUAL="$(sha256sum "${TMP}/vaultbase" | awk '{print $1}')"
+        ACTUAL="$(sha256sum "${TMP}/cogworks" | awk '{print $1}')"
     else
-        ACTUAL="$(shasum -a 256 "${TMP}/vaultbase" | awk '{print $1}')"
+        ACTUAL="$(shasum -a 256 "${TMP}/cogworks" | awk '{print $1}')"
     fi
     [ "${EXPECTED}" = "${ACTUAL}" ] \
         || { err "SHA-256 mismatch. expected=${EXPECTED} actual=${ACTUAL}"; exit 2; }
@@ -184,19 +184,19 @@ if [ "${VERIFY_SIG}" -eq 1 ]; then
         die "--verify-sig requested but \`cosign\` is not on PATH. Install: https://docs.sigstore.dev/cosign/installation/"
     fi
     say "Fetching cosign signature + certificate..."
-    curl -fsSL --retry 3 -o "${TMP}/vaultbase.sig"  "${SIG_URL}"  || die "Could not fetch ${SIG_URL}"
-    curl -fsSL --retry 3 -o "${TMP}/vaultbase.pem"  "${CERT_URL}" || die "Could not fetch ${CERT_URL}"
+    curl -fsSL --retry 3 -o "${TMP}/cogworks.sig"  "${SIG_URL}"  || die "Could not fetch ${SIG_URL}"
+    curl -fsSL --retry 3 -o "${TMP}/cogworks.pem"  "${CERT_URL}" || die "Could not fetch ${CERT_URL}"
     cosign verify-blob \
-        --certificate "${TMP}/vaultbase.pem" \
-        --signature "${TMP}/vaultbase.sig" \
+        --certificate "${TMP}/cogworks.pem" \
+        --signature "${TMP}/cogworks.sig" \
         --certificate-identity-regexp "^https://github\\.com/${REPO}/" \
         --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-        "${TMP}/vaultbase" \
+        "${TMP}/cogworks" \
         || { err "Cosign verification failed."; exit 2; }
     ok "Cosign signature verified — binary built by ${REPO} GitHub Actions"
 fi
 
-chmod 0755 "${TMP}/vaultbase"
+chmod 0755 "${TMP}/cogworks"
 
 # ── User + dirs ─────────────────────────────────────────────────────────────
 header "Service user + directories"
@@ -220,22 +220,22 @@ else
     JWT_SECRET="$(head -c 48 /dev/urandom | base64 | tr -d '\n=' | tr '+/' '-_')"
     umask 077
     cat > "${ENV_FILE}" <<EOF
-# Vaultbase configuration — generated by the installer on $(date -u +%FT%TZ)
-# Override any of these and run \`systemctl restart vaultbase\` to apply.
+# Cogworks configuration — generated by the installer on $(date -u +%FT%TZ)
+# Override any of these and run \`systemctl restart cogworks\` to apply.
 
-VAULTBASE_PORT=${PORT}
-VAULTBASE_DATA_DIR=${DATA_DIR}
+COGWORKS_PORT=${PORT}
+COGWORKS_DATA_DIR=${DATA_DIR}
 
 # Persisted JWT signing key. Loss = every issued token is invalidated.
 # Rotate by changing this value and forcing all clients to reauthenticate.
-VAULTBASE_JWT_SECRET=${JWT_SECRET}
+COGWORKS_JWT_SECRET=${JWT_SECRET}
 
 # Optional: required only if you use encrypted fields.
 # Generate with: head -c 32 /dev/urandom | base64
-# VAULTBASE_ENCRYPTION_KEY=
+# COGWORKS_ENCRYPTION_KEY=
 
 # Optional: comma-separated list of allowed origins for CORS / WS upgrades.
-# VAULTBASE_ALLOWED_ORIGINS=https://your-app.example.com
+# COGWORKS_ALLOWED_ORIGINS=https://your-app.example.com
 EOF
     chown root:"${SVC_GROUP}" "${ENV_FILE}"
     chmod 0640 "${ENV_FILE}"
@@ -246,9 +246,9 @@ fi
 # ── Install binary (atomic) ─────────────────────────────────────────────────
 header "Install binary"
 
-install -m 0755 -o root -g root "${TMP}/vaultbase" "${INSTALL_DIR}/vaultbase.new"
-mv -f "${INSTALL_DIR}/vaultbase.new" "${INSTALL_DIR}/vaultbase"
-ok "Installed ${INSTALL_DIR}/vaultbase"
+install -m 0755 -o root -g root "${TMP}/cogworks" "${INSTALL_DIR}/cogworks.new"
+mv -f "${INSTALL_DIR}/cogworks.new" "${INSTALL_DIR}/cogworks"
+ok "Installed ${INSTALL_DIR}/cogworks"
 
 # ── systemd unit ────────────────────────────────────────────────────────────
 if [ "${NO_SYSTEMD}" -eq 0 ]; then
@@ -256,23 +256,23 @@ if [ "${NO_SYSTEMD}" -eq 0 ]; then
 
     cat > "${UNIT_FILE}" <<'UNIT'
 [Unit]
-Description=Vaultbase backend
-Documentation=https://docs.vaultbase.dev
+Description=Cogworks backend
+Documentation=https://docs.cogworks.dev
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=vaultbase
-Group=vaultbase
-EnvironmentFile=/etc/vaultbase/vaultbase.env
-ExecStart=/usr/local/bin/vaultbase
+User=cogworks
+Group=cogworks
+EnvironmentFile=/etc/cogworks/cogworks.env
+ExecStart=/usr/local/bin/cogworks
 Restart=on-failure
 RestartSec=2s
 TimeoutStopSec=30s
 LimitNOFILE=65536
 
-# Hardening — vaultbase needs nothing from the host filesystem outside
+# Hardening — cogworks needs nothing from the host filesystem outside
 # its data dir. Lock everything else down.
 NoNewPrivileges=yes
 ProtectSystem=strict
@@ -296,9 +296,9 @@ MemoryDenyWriteExecute=no
 # triggers SIGSYS and a core dump under seccomp. The hardening above is
 # enough to neutralise the typical privilege-escalation paths.
 
-# Vaultbase only needs to write inside its data dir. ProtectSystem=strict
-# makes /etc/vaultbase read-only from the service's view (config is read once).
-ReadWritePaths=/var/lib/vaultbase
+# Cogworks only needs to write inside its data dir. ProtectSystem=strict
+# makes /etc/cogworks read-only from the service's view (config is read once).
+ReadWritePaths=/var/lib/cogworks
 CapabilityBoundingSet=
 AmbientCapabilities=
 
@@ -311,16 +311,16 @@ UNIT
     systemctl daemon-reload
 
     if [ "${NO_START}" -eq 0 ]; then
-        systemctl enable --now vaultbase
+        systemctl enable --now cogworks
         sleep 1
-        if systemctl is-active --quiet vaultbase; then
-            ok "vaultbase service is active"
+        if systemctl is-active --quiet cogworks; then
+            ok "cogworks service is active"
         else
-            warn "vaultbase failed to start. Inspect logs: journalctl -u vaultbase -n 50"
+            warn "cogworks failed to start. Inspect logs: journalctl -u cogworks -n 50"
         fi
     else
-        systemctl enable vaultbase
-        ok "Service enabled (use 'systemctl start vaultbase' when ready)"
+        systemctl enable cogworks
+        ok "Service enabled (use 'systemctl start cogworks' when ready)"
     fi
 fi
 
@@ -329,17 +329,17 @@ header "Done"
 
 cat <<EOF
 
-  Vaultbase ${VERSION} installed.
+  Cogworks ${VERSION} installed.
 
-    Binary:    ${INSTALL_DIR}/vaultbase
+    Binary:    ${INSTALL_DIR}/cogworks
     Data dir:  ${DATA_DIR}
     Config:    ${ENV_FILE}
 EOF
 
 if [ "${NO_SYSTEMD}" -eq 0 ]; then
     cat <<EOF
-    Service:   systemctl {start|stop|restart|status} vaultbase
-    Logs:      journalctl -u vaultbase -f
+    Service:   systemctl {start|stop|restart|status} cogworks
+    Logs:      journalctl -u cogworks -f
 
 EOF
 fi
@@ -348,10 +348,10 @@ cat <<EOF
   Next steps:
 
     1. Bootstrap an admin account (one-shot CLI, never exposes the web setup):
-         sudo vaultbase setup-admin --email you@example.com --password '<pw>'
+         sudo cogworks setup-admin --email you@example.com --password '<pw>'
 
     2. Put a reverse proxy in front. Sample configs:
-         https://docs.vaultbase.dev/getting-started/installation/
+         https://docs.cogworks.dev/getting-started/installation/
 
     3. Health check:
          curl http://127.0.0.1:${PORT}/api/health

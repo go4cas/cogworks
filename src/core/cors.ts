@@ -4,7 +4,7 @@
  * Reads runtime config from `cogworks_settings`:
  *   - `cors.origins`     — comma-separated, `*` wildcard, blank = block cross-origin
  *   - `cors.methods`     — comma-separated, default GET,POST,PUT,PATCH,DELETE,OPTIONS
- *   - `cors.headers`     — comma-separated, default Authorization,Content-Type,If-Match,X-VB-Idempotency-Key
+ *   - `cors.headers`     — comma-separated, default Authorization,Content-Type,If-Match,X-CW-Idempotency-Key,X-VB-Idempotency-Key
  *   - `cors.credentials` — "1" / "0", default "0". MUST NOT combine with origins=`*`.
  *   - `cors.max_age`     — seconds for preflight cache, default "600"
  *
@@ -29,7 +29,8 @@ interface CorsConfig {
 }
 
 const DEFAULT_METHODS = "GET,POST,PUT,PATCH,DELETE,OPTIONS";
-const DEFAULT_HEADERS = "Authorization,Content-Type,If-Match,X-VB-Idempotency-Key";
+const DEFAULT_HEADERS =
+  "Authorization,Content-Type,If-Match,X-CW-Idempotency-Key,X-VB-Idempotency-Key";
 const DEFAULT_MAX_AGE = 600;
 
 let cache: { config: CorsConfig; loaded_at: number } | null = null;

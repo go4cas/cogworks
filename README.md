@@ -1,4 +1,4 @@
-# Vaultbase
+# Cogworks
 
 Self-hosted backend in a single binary — collections, REST API, auth, realtime, file uploads, server-side hooks. TypeScript on Bun.
 
@@ -9,10 +9,10 @@ Self-hosted backend in a single binary — collections, REST API, auth, realtime
 ```bash
 # Build
 bun install
-bun run build           # compiles admin + binary → ./vaultbase[.exe]
+bun run build           # compiles admin + binary → ./cogworks[.exe]
 
 # Run
-./vaultbase             # serves on :8091
+./cogworks             # serves on :8091
 # Visit http://localhost:8091/_/  → setup wizard
 ```
 
@@ -28,7 +28,7 @@ bun run build           # compiles admin + binary → ./vaultbase[.exe]
 - **Logs** — JSONL files per UTC day, never deleted. JSONPath search
 - **Rate limiting** — per-IP token bucket, per-rule (path + action + audience). Editable from Settings
 - **SMTP** — full config + test button. `helpers.email()` available in hooks/routes/jobs
-- **Encrypted fields** — AES-GCM via `VAULTBASE_ENCRYPTION_KEY`
+- **Encrypted fields** — AES-GCM via `COGWORKS_ENCRYPTION_KEY`
 - **Backup / restore** — SQLite snapshot download/upload
 - **Single binary** — no native deps. Embedded admin UI (gzip+base64 via Bun macro)
 
@@ -44,15 +44,15 @@ bun run build           # compiles admin + binary → ./vaultbase[.exe]
 
 | Var | Default | Notes |
 |---|---|---|
-| `VAULTBASE_PORT` | `8091` | Listen port |
-| `VAULTBASE_DATA_DIR` | `./vaultbase_data` | DB, uploads, logs, secrets |
-| `VAULTBASE_JWT_SECRET` | auto-generated | Persisted in `<dataDir>/.secret` |
-| `VAULTBASE_ENCRYPTION_KEY` | none | Required for encrypted fields. Base64 / hex / 32-char string (32 bytes) |
-| `VAULTBASE_RATE_*` | rule-based | See Settings → Rate limiting |
+| `COGWORKS_PORT` | `8091` | Listen port |
+| `COGWORKS_DATA_DIR` | `./cogworks_data` | DB, uploads, logs, secrets |
+| `COGWORKS_JWT_SECRET` | auto-generated | Persisted in `<dataDir>/.secret` |
+| `COGWORKS_ENCRYPTION_KEY` | none | Required for encrypted fields. Base64 / hex / 32-char string (32 bytes) |
+| `COGWORKS_RATE_*` | rule-based | See Settings → Rate limiting |
 
 ## Production deployment
 
-Vaultbase is single-process, single-threaded, and **does not terminate TLS or
+Cogworks is single-process, single-threaded, and **does not terminate TLS or
 compress responses in-process**. Both responsibilities belong to a reverse
 proxy in front of the binary — nginx, Caddy, or Cloudflare. In-process
 compression was tried and removed: it blocked the event loop on
@@ -61,7 +61,7 @@ compression was tried and removed: it blocked the event loop on
 ### Recommended topology
 
 ```
-Client ── HTTPS ──> nginx / Caddy / CF ── HTTP ──> Vaultbase :8091
+Client ── HTTPS ──> nginx / Caddy / CF ── HTTP ──> Cogworks :8091
                        │                              │
                        │ TLS termination              │ Bun + SQLite (WAL)
                        │ gzip / brotli                │ Single binary
@@ -73,7 +73,7 @@ Client ── HTTPS ──> nginx / Caddy / CF ── HTTP ──> Vaultbase :80
 ### Sample nginx config
 
 ```nginx
-upstream vaultbase {
+upstream cogworks {
     server 127.0.0.1:8091 keepalive 64;
     keepalive_timeout 60s;
 }
@@ -85,7 +85,7 @@ server {
     ssl_certificate     /etc/letsencrypt/live/api.example.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/api.example.com/privkey.pem;
 
-    # Compression — handled here, not in Vaultbase.
+    # Compression — handled here, not in Cogworks.
     gzip on;
     gzip_types application/json text/plain;
     gzip_min_length 1024;
@@ -94,7 +94,7 @@ server {
 
     # WebSocket realtime
     location /realtime {
-        proxy_pass http://vaultbase;
+        proxy_pass http://cogworks;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "Upgrade";
@@ -102,7 +102,7 @@ server {
     }
 
     location / {
-        proxy_pass http://vaultbase;
+        proxy_pass http://cogworks;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -131,17 +131,17 @@ api.example.com {
 
 ```bash
 # Local file
-vaultbase backup --to /var/backups/vaultbase-$(date +%F).db
+cogworks backup --to /var/backups/cogworks-$(date +%F).db
 
 # Gzip
-vaultbase backup --to /var/backups/snap.db --gzip
+cogworks backup --to /var/backups/snap.db --gzip
 
 # S3 / R2 / B2 (creds via env)
 AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... \
-  vaultbase backup --to s3://my-bucket/vb/snap.db
+  cogworks backup --to s3://my-bucket/vb/snap.db
 
 AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... R2_ENDPOINT=https://<accountid>.r2.cloudflarestorage.com \
-  vaultbase backup --to r2://my-bucket/vb/snap.db --gzip
+  cogworks backup --to r2://my-bucket/vb/snap.db --gzip
 ```
 
 Snapshots are atomic via SQLite's `VACUUM INTO` — concurrent writers are
@@ -149,7 +149,7 @@ serialised but not blocked, and the resulting `.db` file is self-contained
 (no `*-wal` / `*-shm` sidecars to copy alongside). Cron-friendly:
 
 ```cron
-30 3 * * * vaultbase /usr/local/bin/vaultbase backup --to s3://bucket/vb/snap-$(date +\%F).db --gzip --quiet
+30 3 * * * cogworks /usr/local/bin/cogworks backup --to s3://bucket/vb/snap-$(date +\%F).db --gzip --quiet
 ```
 
 Restore via `POST /api/admin/restore` with the snapshot bytes (admin only)
@@ -165,13 +165,13 @@ throughput on multi-core hosts, use the cluster orchestrator:
 bun src/cluster.ts
 
 # Or explicit count
-VAULTBASE_WORKERS=4 bun src/cluster.ts
+COGWORKS_WORKERS=4 bun src/cluster.ts
 
 # Same via npm script
 bun run start:cluster
 ```
 
-The parent process spawns N workers, all sharing port `VAULTBASE_PORT` via
+The parent process spawns N workers, all sharing port `COGWORKS_PORT` via
 `Bun.serve({ reusePort: true })`. The kernel load-balances incoming
 connections across workers. Workers run identical code; SQLite WAL handles
 concurrent readers natively.
@@ -203,14 +203,14 @@ before adopting the dedicated-writer-process pattern.
 
 ### Operational notes
 
-- Run Vaultbase under a process supervisor (systemd, runit, pm2). It does
+- Run Cogworks under a process supervisor (systemd, runit, pm2). It does
   not daemonize itself.
 - Back up `<dataDir>/` periodically. The single-file SQLite DB is the
   source of truth — nothing else lives outside.
-- Set `VAULTBASE_JWT_SECRET` explicitly in production. The auto-generated
+- Set `COGWORKS_JWT_SECRET` explicitly in production. The auto-generated
   fallback is per-host and will rotate if `<dataDir>/.secret` is wiped,
   invalidating every issued token.
-- Set `VAULTBASE_ENCRYPTION_KEY` if you use encrypted fields. Loss of the
+- Set `COGWORKS_ENCRYPTION_KEY` if you use encrypted fields. Loss of the
   key permanently corrupts those columns.
 
 ## Cross-compile
@@ -223,7 +223,7 @@ bun run build:windows-x64
 bun run build:all
 ```
 
-Output: `releases/vaultbase-<target>[.exe]`
+Output: `releases/cogworks-<target>[.exe]`
 
 ## Development
 

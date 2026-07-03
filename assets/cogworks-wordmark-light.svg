@@ -5,5 +5,5 @@
     <path d="M16 15v14" stroke="#1e3a8a" stroke-width="1" opacity="0.6"></path>
     <path d="m11 13 5 3 5-3" stroke="#bfdbfe" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"></path>
   </g>
-  <text x="46" y="29" font-family="ui-sans-serif, -apple-system, &#39;Inter&#39;, &#39;Segoe UI&#39;, sans-serif" font-size="18" font-weight="700" letter-spacing="-0.4" fill="#0e0f12">vaultbase</text>
+  <text x="46" y="29" font-family="ui-sans-serif, -apple-system, &#39;Inter&#39;, &#39;Segoe UI&#39;, sans-serif" font-size="18" font-weight="700" letter-spacing="-0.4" fill="#0e0f12">cogworks</text>
 </svg>

@@ -4,7 +4,7 @@
 # Wired into CI on every PR. Fails the build if RPS drops or p99 spikes.
 #
 # Assumes:
-#   - Vaultbase is running on PORT (default 8091)
+#   - Cogworks is running on PORT (default 8091)
 #   - ADMIN_TOKEN env var is set (admin JWT)
 #   - The collection $COLLECTION already has ≥200 rows seeded
 #

@@ -18,7 +18,7 @@ let tmpDir: string;
 let origFetch: typeof fetch;
 
 beforeEach(async () => {
-  tmpDir = mkdtempSync(join(tmpdir(), "vaultbase-notify-api-"));
+  tmpDir = mkdtempSync(join(tmpdir(), "cogworks-notify-api-"));
   setLogsDir(tmpDir);
   initDb(":memory:");
   await runMigrations();

@@ -1,7 +1,7 @@
 import { getSetting } from "../api/settings.ts";
 
 /**
- * Centralizes JWT lifetime resolution for every token kind Vaultbase issues.
+ * Centralizes JWT lifetime resolution for every token kind Cogworks issues.
  * Each site calls `tokenWindowSeconds(kind, fallback)` instead of hardcoding
  * a `setExpirationTime("7d")` literal — operators can tune any kind from
  * Settings without redeploying.

@@ -10,8 +10,8 @@ services:
   landing:
     build:
       context: ./landing
-    image: vaultbase/landing:latest
-    container_name: vaultbase-landing
+    image: cogworks/landing:latest
+    container_name: cogworks-landing
     restart: unless-stopped
     ports:
       - "8081:80"
@@ -24,8 +24,8 @@ services:
   docs:
     build:
       context: ./site
-    image: vaultbase/docs:latest
-    container_name: vaultbase-docs
+    image: cogworks/docs:latest
+    container_name: cogworks-docs
     restart: unless-stopped
     ports:
       - "8082:80"

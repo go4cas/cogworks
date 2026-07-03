@@ -16,9 +16,9 @@
  * by toggling back on (next boot or a settings save).
  */
 import { getSetting, setSetting } from "../api/settings.ts";
-import { VAULTBASE_VERSION } from "./version.ts";
+import { COGWORKS_VERSION } from "./version.ts";
 
-const REPO = "vaultbase-sh/vaultbase";
+const REPO = "go4cas/cogworks";
 const POLL_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const FIRST_DELAY_MS = 30_000;
 
@@ -61,7 +61,7 @@ export async function runUpdateCheck(): Promise<void> {
   if (getSetting("update_check.enabled", "1") !== "1") return;
   try {
     const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
-      headers: { Accept: "application/vnd.github+json", "User-Agent": "vaultbase-update-check" },
+      headers: { Accept: "application/vnd.github+json", "User-Agent": "cogworks-update-check" },
       signal: AbortSignal.timeout(15_000),
     });
     if (!res.ok) {
@@ -111,9 +111,9 @@ export function getUpdateStatus(): UpdateStatus {
   const checked_at = checkedAtRaw ? Number.parseInt(checkedAtRaw, 10) : null;
   const last_error = getSetting("update_check.error", "") || null;
   const update_available =
-    enabled && latest !== null && compareVersions(latest, VAULTBASE_VERSION) > 0;
+    enabled && latest !== null && compareVersions(latest, COGWORKS_VERSION) > 0;
   return {
-    current_version: VAULTBASE_VERSION,
+    current_version: COGWORKS_VERSION,
     latest_version: latest,
     checked_at,
     enabled,

@@ -20,14 +20,14 @@ import { isEncrypted } from "../core/encryption.ts";
 const ENC_KEY = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="; // 32 bytes base64
 
 beforeEach(async () => {
-  process.env.VAULTBASE_ENCRYPTION_KEY = ENC_KEY;
+  process.env.COGWORKS_ENCRYPTION_KEY = ENC_KEY;
   initDb(":memory:");
   await runMigrations();
 });
 
 afterEach(() => {
   closeDb();
-  delete process.env.VAULTBASE_ENCRYPTION_KEY;
+  delete process.env.COGWORKS_ENCRYPTION_KEY;
 });
 
 const FIELDS = [

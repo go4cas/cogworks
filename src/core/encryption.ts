@@ -5,7 +5,7 @@
  *   - iv:           12 random bytes (96 bits)
  *   - ciphertext:   ciphertext + 128-bit GCM auth tag (WebCrypto appends it)
  *
- * Key source: env `VAULTBASE_ENCRYPTION_KEY` — must be 32 bytes when decoded
+ * Key source: env `COGWORKS_ENCRYPTION_KEY` — must be 32 bytes when decoded
  * from base64, hex, or used as a UTF-8 string of exactly 32 chars. Loss of
  * the key = permanent loss of encrypted data.
  */
@@ -38,14 +38,14 @@ function decodeKey(raw: string): Uint8Array {
   const utf8 = new TextEncoder().encode(raw);
   if (utf8.length === 32) return utf8;
   throw new Error(
-    "VAULTBASE_ENCRYPTION_KEY must decode to 32 bytes (base64, hex, or 32-char string)",
+    "COGWORKS_ENCRYPTION_KEY must decode to 32 bytes (base64, hex, or 32-char string)",
   );
 }
 
 async function getKey(): Promise<CryptoKey> {
-  const raw = process.env.VAULTBASE_ENCRYPTION_KEY ?? "";
+  const raw = process.env.COGWORKS_ENCRYPTION_KEY ?? "";
   if (!raw)
-    throw new Error("VAULTBASE_ENCRYPTION_KEY env var not set — required for encrypted fields");
+    throw new Error("COGWORKS_ENCRYPTION_KEY env var not set — required for encrypted fields");
   if (cachedKey && cachedRawKey === raw) return cachedKey;
   const bytes = decodeKey(raw);
   cachedKey = await crypto.subtle.importKey(
@@ -60,7 +60,7 @@ async function getKey(): Promise<CryptoKey> {
 }
 
 export function isEncryptionAvailable(): boolean {
-  return !!process.env.VAULTBASE_ENCRYPTION_KEY;
+  return !!process.env.COGWORKS_ENCRYPTION_KEY;
 }
 
 function toBase64(bytes: Uint8Array): string {
@@ -116,8 +116,8 @@ export async function decryptValue(stored: string): Promise<string> {
  * restores stay symmetric and you can mix sync/async at will.
  */
 function getRawKeyBytes(): Uint8Array {
-  const raw = process.env.VAULTBASE_ENCRYPTION_KEY ?? "";
-  if (!raw) throw new Error("VAULTBASE_ENCRYPTION_KEY env var not set — required for encryption");
+  const raw = process.env.COGWORKS_ENCRYPTION_KEY ?? "";
+  if (!raw) throw new Error("COGWORKS_ENCRYPTION_KEY env var not set — required for encryption");
   if (cachedRawBytes && cachedRawForBytes === raw) return cachedRawBytes;
   cachedRawBytes = decodeKey(raw);
   cachedRawForBytes = raw;

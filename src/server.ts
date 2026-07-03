@@ -4,7 +4,7 @@ import { Type as t } from "@sinclair/typebox";
 import { jsonBody } from "./api/validator.ts";
 import { upgradeWebSocket, websocket as bunWebsocket } from "hono/bun";
 import type { Config } from "./config.ts";
-import { VAULTBASE_VERSION } from "./core/version.ts";
+import { COGWORKS_VERSION } from "./core/version.ts";
 import { securityHeaders, verifyAuthToken } from "./core/sec.ts";
 import { getAllSettings } from "./api/settings.ts";
 import { setLogsDir } from "./core/file-logger.ts";
@@ -139,7 +139,7 @@ function startFileTokenUsesPrune(): void {
  */
 function recordApiTokenTelemetry(request: Request): void {
   const auth = request.headers.get("authorization") ?? "";
-  const m = /^Bearer\s+vbat_([A-Za-z0-9._-]+)/i.exec(auth);
+  const m = /^Bearer\s+(?:cwat_|vbat_)([A-Za-z0-9._-]+)/i.exec(auth);
   if (!m) return;
   // Decode the JWT payload (no signature verify — that already happened on the
   // request path; we only need the jti for keying).
@@ -181,7 +181,7 @@ export function createServer(config: Config) {
   startApiTokenUsageFlusher();
   // Cross-worker realtime bus: every worker tails the shared event table so a
   // record written on a sibling worker reaches this worker's WS/SSE subscribers.
-  // No-op in single-process mode (self-gated on VAULTBASE_WORKER_ID).
+  // No-op in single-process mode (self-gated on COGWORKS_WORKER_ID).
   startRealtimeTail({
     onRecord: (collection, event, opts) =>
       deliverRecordLocal(collection, event as RealtimeEvent, opts as BroadcastOpts | undefined),
@@ -206,8 +206,8 @@ export function createServer(config: Config) {
   // through the shared DB. These loops have NO atomic claim, so running them in
   // every worker fires them N times (N× cron runs, N× webhook deliveries, N×
   // prunes/update-checks). Gate them to a single leader — worker 0 under cluster,
-  // and always-true for the single-process deployment (no VAULTBASE_WORKER_ID).
-  const workerId = process.env.VAULTBASE_WORKER_ID;
+  // and always-true for the single-process deployment (no COGWORKS_WORKER_ID).
+  const workerId = process.env.COGWORKS_WORKER_ID;
   const isSchedulerLeader = !workerId || workerId === "0";
   if (isSchedulerLeader) {
     startScheduler();
@@ -364,16 +364,14 @@ export function createServer(config: Config) {
   // static-over-dynamic priority makes these win over records' `/:collection`
   // catch-all. (Registering them on the root `app` instead fails: `app.route`
   // creates a separate router boundary and records shadows them.)
-  migrated.get("/api/health", (c) =>
-    c.json({ data: { status: "ok", version: VAULTBASE_VERSION } }),
-  );
+  migrated.get("/api/health", (c) => c.json({ data: { status: "ok", version: COGWORKS_VERSION } }));
   // Cluster health probe — admin proxies / load-balancers hit this. Worker id
   // (if running under cluster mode) helps debug which worker answered.
   migrated.get("/_/health", (c) =>
     c.json({
       data: {
         status: "ok",
-        worker_id: process.env.VAULTBASE_WORKER_ID ?? null,
+        worker_id: process.env.COGWORKS_WORKER_ID ?? null,
         pid: process.pid,
         uptime_s: Math.floor(process.uptime()),
       },

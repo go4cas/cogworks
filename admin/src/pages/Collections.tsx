@@ -373,7 +373,7 @@ const CollectionsEmptyState: React.FC<{ hasAny: boolean; onNew: () => void }> = 
       <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
         <VbBtn kind="primary" size="sm" icon="plus" onClick={onNew}>New collection</VbBtn>
         <a
-          href="https://docs.vaultbase.dev/concepts/collections/"
+          href="https://docs.cogworks.dev/concepts/collections/"
           target="_blank"
           rel="noreferrer"
           style={{

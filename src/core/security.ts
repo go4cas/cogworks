@@ -5,7 +5,7 @@
  *     listed via UI, revoked one-by-one or all-at-once.
  *   - Brute-force lockout (cogworks_login_failures): records failed
  *     login attempts keyed by email + ip; checks reject within window.
- *   - Trusted proxies: setting overrides VAULTBASE_TRUSTED_PROXIES env.
+ *   - Trusted proxies: setting overrides COGWORKS_TRUSTED_PROXIES env.
  *   - Secrets fingerprints: SHA-256 first 8 hex chars of JWT/AES keys.
  *   - Security headers preview: render what the server sends.
  */
@@ -28,7 +28,7 @@ import { getSetting } from "../api/settings.ts";
 export function getTrustedProxiesRaw(): string {
   const setting = (getSetting("security.trusted_proxies", "") || "").trim();
   if (setting) return setting;
-  return (process.env.VAULTBASE_TRUSTED_PROXIES ?? "").trim();
+  return (process.env.COGWORKS_TRUSTED_PROXIES ?? "").trim();
 }
 
 // ── Admin sessions ──────────────────────────────────────────────────────────

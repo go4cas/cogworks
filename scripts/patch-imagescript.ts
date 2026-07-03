@@ -18,7 +18,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const TARGET = resolve(import.meta.dir, "..", "node_modules/imagescript/codecs/node/index.js");
-const SENTINEL = "// vaultbase-imagescript-patch-v1";
+const SENTINEL = "// cogworks-imagescript-patch-v1";
 
 const STUB = `${SENTINEL}
 // Original: required ./bin/<arch>-<platform>.node which is not bundleable

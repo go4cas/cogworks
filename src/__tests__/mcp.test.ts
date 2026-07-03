@@ -41,7 +41,7 @@ function mkCtx(scopes: string[], opts: Partial<ToolContext> = {}): ToolContext {
 }
 
 beforeEach(async () => {
-  tmpDir = mkdtempSync(join(tmpdir(), "vaultbase-mcp-"));
+  tmpDir = mkdtempSync(join(tmpdir(), "cogworks-mcp-"));
   setLogsDir(tmpDir);
   setUploadDir(tmpDir);
   invalidateStorageCache();
@@ -120,16 +120,16 @@ describe("MCP — tools/list", () => {
     )) as JsonRpcSuccess;
     const result = r.result as { tools: Array<{ name: string }> };
     const names = result.tools.map((t) => t.name);
-    expect(names).toContain("vaultbase.list_collections");
-    expect(names).toContain("vaultbase.describe_collection");
-    expect(names).toContain("vaultbase.read_logs");
-    expect(names).toContain("vaultbase.read_audit_log");
+    expect(names).toContain("cogworks.list_collections");
+    expect(names).toContain("cogworks.describe_collection");
+    expect(names).toContain("cogworks.read_logs");
+    expect(names).toContain("cogworks.read_audit_log");
     // v0.11 dropped the static list_auth_users — auto-gen covers it.
-    expect(names).toContain("vaultbase.list_posts");
-    expect(names).toContain("vaultbase.get_posts");
-    expect(names).toContain("vaultbase.create_posts");
-    expect(names).toContain("vaultbase.update_posts");
-    expect(names).toContain("vaultbase.delete_posts");
+    expect(names).toContain("cogworks.list_posts");
+    expect(names).toContain("cogworks.get_posts");
+    expect(names).toContain("cogworks.create_posts");
+    expect(names).toContain("cogworks.update_posts");
+    expect(names).toContain("cogworks.delete_posts");
   });
 
   it("read-only registry omits create/update/delete tools", async () => {
@@ -141,11 +141,11 @@ describe("MCP — tools/list", () => {
     )) as JsonRpcSuccess;
     const result = r.result as { tools: Array<{ name: string }> };
     const names = result.tools.map((t) => t.name);
-    expect(names).toContain("vaultbase.list_posts");
-    expect(names).toContain("vaultbase.get_posts");
-    expect(names).not.toContain("vaultbase.create_posts");
-    expect(names).not.toContain("vaultbase.update_posts");
-    expect(names).not.toContain("vaultbase.delete_posts");
+    expect(names).toContain("cogworks.list_posts");
+    expect(names).toContain("cogworks.get_posts");
+    expect(names).not.toContain("cogworks.create_posts");
+    expect(names).not.toContain("cogworks.update_posts");
+    expect(names).not.toContain("cogworks.delete_posts");
   });
 });
 
@@ -157,7 +157,7 @@ describe("MCP — tools/call", () => {
         jsonrpc: "2.0",
         id: 4,
         method: "tools/call",
-        params: { name: "vaultbase.list_collections" },
+        params: { name: "cogworks.list_collections" },
       },
       mkCtx(["mcp:read"]),
     )) as JsonRpcSuccess;
@@ -176,7 +176,7 @@ describe("MCP — tools/call", () => {
         jsonrpc: "2.0",
         id: 5,
         method: "tools/call",
-        params: { name: "vaultbase.describe_collection", arguments: { name: "posts" } },
+        params: { name: "cogworks.describe_collection", arguments: { name: "posts" } },
       },
       mkCtx(["mcp:read"]),
     )) as JsonRpcSuccess;
@@ -194,7 +194,7 @@ describe("MCP — tools/call", () => {
         jsonrpc: "2.0",
         id: 6,
         method: "tools/call",
-        params: { name: "vaultbase.create_posts", arguments: { data: { title: "hi" } } },
+        params: { name: "cogworks.create_posts", arguments: { data: { title: "hi" } } },
       },
       mkCtx(["mcp:read"]), // read-only token tries to write
     )) as JsonRpcSuccess;
@@ -213,7 +213,7 @@ describe("MCP — tools/call", () => {
         id: 7,
         method: "tools/call",
         params: {
-          name: "vaultbase.create_posts",
+          name: "cogworks.create_posts",
           arguments: { data: { title: "hello", status: "live" } },
         },
       },
@@ -237,7 +237,7 @@ describe("MCP — tools/call", () => {
         jsonrpc: "2.0",
         id: 8,
         method: "tools/call",
-        params: { name: "vaultbase.list_posts", arguments: {} },
+        params: { name: "cogworks.list_posts", arguments: {} },
       },
       mkCtx(["mcp:read"]),
     )) as JsonRpcSuccess;
@@ -258,7 +258,7 @@ describe("MCP — tools/call", () => {
         id: 9,
         method: "tools/call",
         params: {
-          name: "vaultbase.update_posts",
+          name: "cogworks.update_posts",
           arguments: { id: created.id, data: { title: "x renamed" } },
         },
       },
@@ -271,7 +271,7 @@ describe("MCP — tools/call", () => {
         jsonrpc: "2.0",
         id: 10,
         method: "tools/call",
-        params: { name: "vaultbase.delete_posts", arguments: { id: created.id } },
+        params: { name: "cogworks.delete_posts", arguments: { id: created.id } },
       },
       mkCtx(["mcp:write"]),
     )) as JsonRpcSuccess;
@@ -285,7 +285,7 @@ describe("MCP — tools/call", () => {
         jsonrpc: "2.0",
         id: 11,
         method: "tools/call",
-        params: { name: "vaultbase.create_posts", arguments: { data: { title: "via-admin" } } },
+        params: { name: "cogworks.create_posts", arguments: { data: { title: "via-admin" } } },
       },
       mkCtx(["admin"]),
     )) as JsonRpcSuccess;
@@ -294,7 +294,7 @@ describe("MCP — tools/call", () => {
 
   it("unknown tool name returns a tool-error CallToolResult, not an RPC error", async () => {
     const r = (await dispatch(
-      { jsonrpc: "2.0", id: 12, method: "tools/call", params: { name: "vaultbase.nope" } },
+      { jsonrpc: "2.0", id: 12, method: "tools/call", params: { name: "cogworks.nope" } },
       mkCtx(["mcp:read"]),
     )) as JsonRpcSuccess;
     const result = r.result as CallToolResult;
@@ -339,7 +339,7 @@ describe("MCP — Phase 2 admin tools", () => {
         id: 100,
         method: "tools/call",
         params: {
-          name: "vaultbase.create_collection",
+          name: "cogworks.create_collection",
           arguments: {
             name: "tasks",
             type: "base",
@@ -368,7 +368,7 @@ describe("MCP — Phase 2 admin tools", () => {
         id: 101,
         method: "tools/call",
         params: {
-          name: "vaultbase.alter_collection",
+          name: "cogworks.alter_collection",
           arguments: { id_or_name: "posts", view_rule: "" },
         },
       },
@@ -388,7 +388,7 @@ describe("MCP — Phase 2 admin tools", () => {
         id: 102,
         method: "tools/call",
         params: {
-          name: "vaultbase.create_hook",
+          name: "cogworks.create_hook",
           arguments: {
             name: "test-hook",
             collection_name: "posts",
@@ -402,7 +402,7 @@ describe("MCP — Phase 2 admin tools", () => {
     expect((create.result as CallToolResult).isError).toBeFalsy();
 
     const list = (await dispatch(
-      { jsonrpc: "2.0", id: 103, method: "tools/call", params: { name: "vaultbase.list_hooks" } },
+      { jsonrpc: "2.0", id: 103, method: "tools/call", params: { name: "cogworks.list_hooks" } },
       mkCtx(["mcp:read"]),
     )) as JsonRpcSuccess;
     const text = ((list.result as CallToolResult).content[0] as { text: string }).text;
@@ -417,7 +417,7 @@ describe("MCP — Phase 2 admin tools", () => {
         id: 104,
         method: "tools/call",
         params: {
-          name: "vaultbase.create_job",
+          name: "cogworks.create_job",
           arguments: { name: "bad", cron: "not-a-cron", code: "// noop" },
         },
       },
@@ -434,7 +434,7 @@ describe("MCP — Phase 2 admin tools", () => {
         jsonrpc: "2.0",
         id: 105,
         method: "tools/call",
-        params: { name: "vaultbase.update_setting", arguments: { key: "test.foo", value: "bar" } },
+        params: { name: "cogworks.update_setting", arguments: { key: "test.foo", value: "bar" } },
       },
       mkCtx(["mcp:admin"]),
     )) as JsonRpcSuccess;
@@ -447,7 +447,7 @@ describe("MCP — Phase 2 admin tools", () => {
         jsonrpc: "2.0",
         id: 106,
         method: "tools/call",
-        params: { name: "vaultbase.get_setting", arguments: { key: "test.foo" } },
+        params: { name: "cogworks.get_setting", arguments: { key: "test.foo" } },
       },
       mkCtx(["mcp:admin"]),
     )) as JsonRpcSuccess;
@@ -463,7 +463,7 @@ describe("MCP — Phase 2 admin tools", () => {
         id: 107,
         method: "tools/call",
         params: {
-          name: "vaultbase.run_sql",
+          name: "cogworks.run_sql",
           arguments: { query: "DELETE FROM cogworks_admin" },
         },
       },
@@ -481,7 +481,7 @@ describe("MCP — Phase 2 admin tools", () => {
         id: 108,
         method: "tools/call",
         params: {
-          name: "vaultbase.run_sql",
+          name: "cogworks.run_sql",
           arguments: { query: "SELECT 1 AS one" },
         },
       },
@@ -503,7 +503,7 @@ describe("MCP — Phase 2 admin tools", () => {
         id: 109,
         method: "tools/call",
         params: {
-          name: "vaultbase.seed",
+          name: "cogworks.seed",
           arguments: { collection: "posts", count: 5 },
         },
       },
@@ -524,7 +524,7 @@ describe("MCP — Phase 2 admin tools", () => {
         id: 110,
         method: "tools/call",
         params: {
-          name: "vaultbase.delete_collection",
+          name: "cogworks.delete_collection",
           arguments: { id_or_name: "posts" },
         },
       },
@@ -557,10 +557,10 @@ describe("MCP Phase 3 — Resources", () => {
     )) as JsonRpcSuccess;
     const result = r.result as { resources: Array<{ uri: string }> };
     const uris = result.resources.map((x) => x.uri);
-    expect(uris).toContain("vaultbase://collections");
-    expect(uris).toContain("vaultbase://audit/recent");
-    expect(uris).toContain("vaultbase://settings");
-    expect(uris).toContain("vaultbase://server/info");
+    expect(uris).toContain("cogworks://collections");
+    expect(uris).toContain("cogworks://audit/recent");
+    expect(uris).toContain("cogworks://settings");
+    expect(uris).toContain("cogworks://server/info");
   });
 
   it("resources/templates/list includes record + collection + logs templates", async () => {
@@ -571,19 +571,19 @@ describe("MCP Phase 3 — Resources", () => {
     const templates = (r.result as { resourceTemplates: Array<{ uriTemplate: string }> })
       .resourceTemplates;
     const tpls = templates.map((t) => t.uriTemplate);
-    expect(tpls).toContain("vaultbase://collection/{name}");
-    expect(tpls).toContain("vaultbase://record/{collection}/{id}");
-    expect(tpls).toContain("vaultbase://logs/{date}");
+    expect(tpls).toContain("cogworks://collection/{name}");
+    expect(tpls).toContain("cogworks://record/{collection}/{id}");
+    expect(tpls).toContain("cogworks://logs/{date}");
   });
 
-  it("resources/read vaultbase://collections returns JSON contents", async () => {
+  it("resources/read cogworks://collections returns JSON contents", async () => {
     await seedPostsCollection();
     const r = (await dispatch(
       {
         jsonrpc: "2.0",
         id: 203,
         method: "resources/read",
-        params: { uri: "vaultbase://collections" },
+        params: { uri: "cogworks://collections" },
       },
       mkCtx(["mcp:read"]),
     )) as JsonRpcSuccess;
@@ -591,20 +591,20 @@ describe("MCP Phase 3 — Resources", () => {
       r.result as { contents: Array<{ uri: string; mimeType: string; text: string }> }
     ).contents;
     expect(contents).toHaveLength(1);
-    expect(contents[0]!.uri).toBe("vaultbase://collections");
+    expect(contents[0]!.uri).toBe("cogworks://collections");
     expect(contents[0]!.mimeType).toBe("application/json");
     const data = JSON.parse(contents[0]!.text) as Array<{ name: string }>;
     expect(data.some((c) => c.name === "posts")).toBe(true);
   });
 
-  it("resources/read vaultbase://collection/{name} returns the schema", async () => {
+  it("resources/read cogworks://collection/{name} returns the schema", async () => {
     await seedPostsCollection();
     const r = (await dispatch(
       {
         jsonrpc: "2.0",
         id: 204,
         method: "resources/read",
-        params: { uri: "vaultbase://collection/posts" },
+        params: { uri: "cogworks://collection/posts" },
       },
       mkCtx(["mcp:read"]),
     )) as JsonRpcSuccess;
@@ -614,7 +614,7 @@ describe("MCP Phase 3 — Resources", () => {
     expect(data.fields.some((f) => f.name === "title")).toBe(true);
   });
 
-  it("resources/read vaultbase://record/{col}/{id} returns the record", async () => {
+  it("resources/read cogworks://record/{col}/{id} returns the record", async () => {
     await seedPostsCollection();
     const created = await createRecord("posts", { title: "hello", status: "draft" });
     const r = (await dispatch(
@@ -622,7 +622,7 @@ describe("MCP Phase 3 — Resources", () => {
         jsonrpc: "2.0",
         id: 205,
         method: "resources/read",
-        params: { uri: `vaultbase://record/posts/${created.id}` },
+        params: { uri: `cogworks://record/posts/${created.id}` },
       },
       mkCtx(["mcp:read"]),
     )) as JsonRpcSuccess;
@@ -633,7 +633,7 @@ describe("MCP Phase 3 — Resources", () => {
 
   it("resources/read with bad URI fails with InvalidParams", async () => {
     const r = (await dispatch(
-      { jsonrpc: "2.0", id: 206, method: "resources/read", params: { uri: "vaultbase://nope" } },
+      { jsonrpc: "2.0", id: 206, method: "resources/read", params: { uri: "cogworks://nope" } },
       mkCtx(["mcp:read"]),
     )) as JsonRpcError;
     expect(r.error.code).toBe(-32602);
@@ -653,7 +653,7 @@ describe("MCP Phase 3 — Resources", () => {
         jsonrpc: "2.0",
         id: 208,
         method: "resources/read",
-        params: { uri: "vaultbase://collections" },
+        params: { uri: "cogworks://collections" },
       },
       mkCtx(["mcp:write"]),
     )) as JsonRpcError;

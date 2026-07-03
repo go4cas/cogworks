@@ -1,6 +1,6 @@
 import type { Database } from "bun:sqlite";
 import { getDb } from "./client.ts";
-import { VAULTBASE_VERSION } from "../core/version.ts";
+import { COGWORKS_VERSION } from "../core/version.ts";
 
 /**
  * Apply the schema. Runs on every boot: `CREATE TABLE IF NOT EXISTS` +
@@ -640,7 +640,7 @@ function applySchema(client: Database): void {
       `INSERT INTO cogworks_schema (id, version) VALUES (1, ?)
        ON CONFLICT(id) DO UPDATE SET version = excluded.version, applied_at = unixepoch()`,
     )
-    .run(VAULTBASE_VERSION);
+    .run(COGWORKS_VERSION);
 }
 
 /**

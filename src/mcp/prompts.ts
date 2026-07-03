@@ -47,7 +47,7 @@ const PROMPTS: InternalPrompt[] = [
   {
     name: "design-collection",
     description:
-      "Interview the user to design a new Vaultbase collection — fields, types, rules. Ends by calling vaultbase.create_collection.",
+      "Interview the user to design a new Cogworks collection — fields, types, rules. Ends by calling cogworks.create_collection.",
     arguments: [
       {
         name: "topic",
@@ -59,14 +59,14 @@ const PROMPTS: InternalPrompt[] = [
       const topic = String(args.topic ?? "<unspecified>");
       return [
         userMsg(
-          `You're helping design a new Vaultbase collection for: ${topic}.\n\n` +
+          `You're helping design a new Cogworks collection for: ${topic}.\n\n` +
             "Walk through these steps in order:\n" +
             "1. Confirm what entities live in this collection and what each one represents.\n" +
             "2. Propose ~5–10 fields (name, type, options) — call out unique constraints, foreign-key relations, encrypted-at-rest candidates.\n" +
             "3. Propose API rules (list / view / create / update / delete) — who can do what.\n" +
             "4. Decide whether to enable record history.\n" +
-            "5. Once the user approves, call `vaultbase.create_collection` with the agreed shape.\n\n" +
-            "Use `vaultbase.list_collections` first to avoid duplicating an existing one.",
+            "5. Once the user approves, call `cogworks.create_collection` with the agreed shape.\n\n" +
+            "Use `cogworks.list_collections` first to avoid duplicating an existing one.",
         ),
       ];
     },
@@ -90,9 +90,9 @@ const PROMPTS: InternalPrompt[] = [
         userMsg(
           `Investigate the failure related to: \`${needle}\` (logs from ${date}).\n\n` +
             "Steps:\n" +
-            `1. Read \`vaultbase://logs/${date}\` (or call \`vaultbase.read_logs\`) and find entries matching the needle.\n` +
+            `1. Read \`cogworks://logs/${date}\` (or call \`cogworks.read_logs\`) and find entries matching the needle.\n` +
             "2. For any 4xx/5xx, note status, ip, user-agent, request id.\n" +
-            "3. Check `vaultbase.read_audit_log` for adjacent state changes.\n" +
+            "3. Check `cogworks.read_audit_log` for adjacent state changes.\n" +
             "4. Synthesise: what request, who, when, what failed, likely cause.\n" +
             "Be terse — a one-paragraph summary then a bulleted timeline.",
         ),
@@ -109,7 +109,7 @@ const PROMPTS: InternalPrompt[] = [
       return [
         userMsg(
           `Review the API rules for the \`${collection}\` collection.\n\n` +
-            `Read \`vaultbase://collection/${collection}\` first. Then evaluate each of the five rules ` +
+            `Read \`cogworks://collection/${collection}\` first. Then evaluate each of the five rules ` +
             "(list / view / create / update / delete) against this checklist:\n\n" +
             "- Is `''` (empty string = full public access) used by accident?\n" +
             "- Does `update` / `delete` confine ownership via `@request.auth.id = field`?\n" +
@@ -124,7 +124,7 @@ const PROMPTS: InternalPrompt[] = [
   {
     name: "import-from-pocketbase",
     description:
-      "Step-by-step plan to migrate a PocketBase deployment into this Vaultbase. Emits commands; does not run them.",
+      "Step-by-step plan to migrate a PocketBase deployment into this Cogworks. Emits commands; does not run them.",
     arguments: [
       { name: "pbDataPath", description: "Path to PocketBase pb_data directory.", required: false },
     ],
@@ -132,13 +132,13 @@ const PROMPTS: InternalPrompt[] = [
       const pb = typeof args.pbDataPath === "string" ? args.pbDataPath : "/path/to/pb_data";
       return [
         userMsg(
-          `Plan a migration from PocketBase (data at \`${pb}\`) to this Vaultbase deployment.\n\n` +
+          `Plan a migration from PocketBase (data at \`${pb}\`) to this Cogworks deployment.\n\n` +
             "Cover:\n" +
-            "1. Schema export from PB (`pocketbase admin export ...`) → vaultbase create_collection per resource.\n" +
-            "2. Data copy strategy — direct SQL? CSV via `vaultbase csv import`?\n" +
+            "1. Schema export from PB (`pocketbase admin export ...`) → cogworks create_collection per resource.\n" +
+            "2. Data copy strategy — direct SQL? CSV via `cogworks csv import`?\n" +
             "3. Auth-user migration: hash format compatibility, force password reset.\n" +
-            "4. File migration: pb_data/storage → vaultbase uploads dir / S3.\n" +
-            "5. Custom hooks: rewrite as Vaultbase JS hooks.\n" +
+            "4. File migration: pb_data/storage → cogworks uploads dir / S3.\n" +
+            "5. Custom hooks: rewrite as Cogworks JS hooks.\n" +
             "6. Cutover: dual-write window vs. hard cutover.\n\n" +
             "Output as numbered steps with the exact commands to run. Do NOT execute mutating tools — review first.",
         ),
@@ -152,11 +152,11 @@ const PROMPTS: InternalPrompt[] = [
     arguments: [],
     build: () => [
       userMsg(
-        "Inspect every collection in this Vaultbase and suggest optimisations.\n\n" +
+        "Inspect every collection in this Cogworks and suggest optimisations.\n\n" +
           "Method:\n" +
-          "1. Read `vaultbase://collections`.\n" +
-          "2. For each, read `vaultbase://collection/{name}` and look at field types + rules.\n" +
-          "3. Check `vaultbase.list_indexes` (if available) for current indexes.\n" +
+          "1. Read `cogworks://collections`.\n" +
+          "2. For each, read `cogworks://collection/{name}` and look at field types + rules.\n" +
+          "3. Check `cogworks.list_indexes` (if available) for current indexes.\n" +
           "4. Suggest:\n" +
           "   - Missing indexes for fields used in rules / common filters.\n" +
           "   - Wide TEXT columns that should split into a child collection.\n" +

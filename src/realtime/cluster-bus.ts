@@ -1,7 +1,7 @@
 /**
  * Cross-worker realtime fan-out over a shared SQLite table
- * (`cogworks_realtime_events`). Active ONLY under `vaultbase cluster`
- * (VAULTBASE_WORKER_ID set) — single-process deployments never read or write
+ * (`cogworks_realtime_events`). Active ONLY under `cogworks cluster`
+ * (COGWORKS_WORKER_ID set) — single-process deployments never read or write
  * the table, so this whole module is a set of no-ops there.
  *
  * Flow: a `broadcast()` on worker A delivers to A's own local subscribers AND
@@ -13,7 +13,7 @@
 import type { Statement } from "bun:sqlite";
 import { getRawClient } from "../db/client.ts";
 
-const WORKER_ID = process.env.VAULTBASE_WORKER_ID ?? null;
+const WORKER_ID = process.env.COGWORKS_WORKER_ID ?? null;
 
 /** True when running as a cluster worker (multiple processes share the DB). */
 export function isClusterWorker(): boolean {

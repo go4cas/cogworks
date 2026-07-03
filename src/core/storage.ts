@@ -26,7 +26,7 @@ function safeLocalPath(uploadDir: string, key: string): string {
  * invalidated on settings PATCH (see api/settings.ts).
  *
  * Local mode keeps full backwards-compat: the same `<uploadDir>/<filename>`
- * paths that older Vaultbase installs created continue to work.
+ * paths that older Cogworks installs created continue to work.
  */
 
 export type StorageDriver = "local" | "s3";
@@ -237,7 +237,7 @@ export async function testStorage(): Promise<{
   error?: string;
 }> {
   const cfg = getConfig();
-  const probeKey = `.vaultbase-probe-${Date.now()}`;
+  const probeKey = `.cogworks-probe-${Date.now()}`;
   const probeData = new TextEncoder().encode("ok").buffer;
   try {
     await writeFile(probeKey, probeData, "text/plain");

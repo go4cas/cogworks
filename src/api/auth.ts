@@ -284,10 +284,10 @@ export function makeAuthPlugin(jwtSecret: string) {
               return c.json({ error: pwErr, code: 422 }, 422);
             }
           }
-          // Optional setup-key gate. When `VAULTBASE_SETUP_KEY` is set, the
+          // Optional setup-key gate. When `COGWORKS_SETUP_KEY` is set, the
           // request must carry it as `X-Setup-Key`. Closes the race where an
           // attacker reaches /setup before the operator on a public IP.
-          const expected = process.env.VAULTBASE_SETUP_KEY;
+          const expected = process.env.COGWORKS_SETUP_KEY;
           if (expected) {
             const provided = request.headers.get("x-setup-key");
             if (!provided || provided !== expected) {
@@ -1142,7 +1142,7 @@ export function makeAuthPlugin(jwtSecret: string) {
         const otpauthUrl = buildOtpauthUrl({
           secret,
           accountName: u.email,
-          issuer: getAppUrl() || "Vaultbase",
+          issuer: getAppUrl() || "Cogworks",
         });
         return c.json({ data: { secret, otpauth_url: otpauthUrl } });
       })

@@ -822,9 +822,9 @@ const FTS5: SqlFunction[] = [
   },
 ];
 
-// ── Vaultbase-flavour helpers (none yet, placeholder for future reg) ────
+// ── Cogworks-flavour helpers (none yet, placeholder for future reg) ────
 
-const VAULTBASE: SqlFunction[] = [];
+const COGWORKS: SqlFunction[] = [];
 
 export const SQL_FUNCTIONS: SqlFunction[] = [
   ...AGGREGATE,
@@ -835,7 +835,7 @@ export const SQL_FUNCTIONS: SqlFunction[] = [
   ...JSON_FUNCS,
   ...WINDOW,
   ...FTS5,
-  ...VAULTBASE,
+  ...COGWORKS,
 ];
 
 /** Look up by name (case-insensitive). */

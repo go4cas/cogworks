@@ -28,19 +28,19 @@ let tmpDir: string;
 let originalKey: string | undefined;
 
 beforeEach(async () => {
-  tmpDir = mkdtempSync(join(tmpdir(), "vaultbase-settings-crypto-"));
+  tmpDir = mkdtempSync(join(tmpdir(), "cogworks-settings-crypto-"));
   setLogsDir(tmpDir);
   initDb(":memory:");
   await runMigrations();
-  originalKey = process.env.VAULTBASE_ENCRYPTION_KEY;
+  originalKey = process.env.COGWORKS_ENCRYPTION_KEY;
   _resetSettingsCryptoWarnings();
 });
 
 afterEach(() => {
   closeDb();
   rmSync(tmpDir, { recursive: true, force: true });
-  if (originalKey === undefined) delete process.env.VAULTBASE_ENCRYPTION_KEY;
-  else process.env.VAULTBASE_ENCRYPTION_KEY = originalKey;
+  if (originalKey === undefined) delete process.env.COGWORKS_ENCRYPTION_KEY;
+  else process.env.COGWORKS_ENCRYPTION_KEY = originalKey;
 });
 
 describe("shouldEncryptSettingKey", () => {
@@ -70,7 +70,7 @@ describe("shouldEncryptSettingKey", () => {
 
 describe("setSetting / getSetting with encryption key set", () => {
   beforeEach(() => {
-    process.env.VAULTBASE_ENCRYPTION_KEY = TEST_KEY;
+    process.env.COGWORKS_ENCRYPTION_KEY = TEST_KEY;
   });
 
   it("encrypts a secret-shaped value at rest, returns plaintext on read", () => {
@@ -129,7 +129,7 @@ describe("setSetting / getSetting with encryption key set", () => {
 
 describe("setSetting without encryption key", () => {
   beforeEach(() => {
-    delete process.env.VAULTBASE_ENCRYPTION_KEY;
+    delete process.env.COGWORKS_ENCRYPTION_KEY;
   });
 
   it("stores secrets as plaintext (back-compat) and emits one warning per key", () => {
@@ -148,7 +148,7 @@ describe("setSetting without encryption key", () => {
 
     const warns = errors.filter((s) => s.includes("smtp.password"));
     expect(warns.length).toBe(1);
-    expect(warns[0]).toContain("VAULTBASE_ENCRYPTION_KEY is not set");
+    expect(warns[0]).toContain("COGWORKS_ENCRYPTION_KEY is not set");
 
     // Storage is plaintext (back-compat path).
     expect(getSetting("smtp.password", "")).toBe("hunter3");
@@ -157,11 +157,11 @@ describe("setSetting without encryption key", () => {
 
 describe("decrypt failure path", () => {
   it("returns empty string and warns when key is wrong", () => {
-    process.env.VAULTBASE_ENCRYPTION_KEY = TEST_KEY;
+    process.env.COGWORKS_ENCRYPTION_KEY = TEST_KEY;
     setSetting("smtp.password", "hunter2");
 
     // Rotate to a different key — old ciphertext is now unreadable.
-    process.env.VAULTBASE_ENCRYPTION_KEY = ALT_KEY;
+    process.env.COGWORKS_ENCRYPTION_KEY = ALT_KEY;
     _resetSettingsCryptoWarnings();
 
     const errors: string[] = [];
@@ -186,7 +186,7 @@ describe("decrypt failure path", () => {
 
 describe("wire compatibility: sync ⇄ async", () => {
   beforeEach(() => {
-    process.env.VAULTBASE_ENCRYPTION_KEY = TEST_KEY;
+    process.env.COGWORKS_ENCRYPTION_KEY = TEST_KEY;
   });
 
   it("sync-encrypted decrypts via async", async () => {

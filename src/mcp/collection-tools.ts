@@ -1,13 +1,13 @@
 /**
- * Auto-generated MCP tools per vaultbase collection.
+ * Auto-generated MCP tools per cogworks collection.
  *
  * For every collection, we mint five tools:
  *
- *   vaultbase.list_<collection>(filter?, sort?, page?, perPage?, fields?)
- *   vaultbase.get_<collection>(id)
- *   vaultbase.create_<collection>(data)        — write scope
- *   vaultbase.update_<collection>(id, data)    — write scope
- *   vaultbase.delete_<collection>(id)          — write scope
+ *   cogworks.list_<collection>(filter?, sort?, page?, perPage?, fields?)
+ *   cogworks.get_<collection>(id)
+ *   cogworks.create_<collection>(data)        — write scope
+ *   cogworks.update_<collection>(id, data)    — write scope
+ *   cogworks.delete_<collection>(id)          — write scope
  *
  * Field-type info on each collection drives the inputSchema for create /
  * update so the LLM can construct well-typed calls without trial-and-error.
@@ -128,7 +128,7 @@ export async function registerCollectionTools(reg: ToolRegistry): Promise<void> 
     reg.register({
       requiredScope: "mcp:read",
       definition: {
-        name: `vaultbase.list_${slug}`,
+        name: `cogworks.list_${slug}`,
         description: `List records in the '${slug}' collection. Supports filter expressions, sort, pagination, and field projection. Cap: ${HARD_PER_PAGE_CAP} records per page.`,
         inputSchema: {
           type: "object",
@@ -136,7 +136,7 @@ export async function registerCollectionTools(reg: ToolRegistry): Promise<void> 
             filter: {
               type: "string",
               description:
-                "vaultbase rule-expression filter, e.g. \"status = 'live' && created > 1700000000\"",
+                "cogworks rule-expression filter, e.g. \"status = 'live' && created > 1700000000\"",
             },
             sort: {
               type: "string",
@@ -179,7 +179,7 @@ export async function registerCollectionTools(reg: ToolRegistry): Promise<void> 
     reg.register({
       requiredScope: "mcp:read",
       definition: {
-        name: `vaultbase.get_${slug}`,
+        name: `cogworks.get_${slug}`,
         description: `Fetch a single '${slug}' record by id. Returns null if not found.`,
         inputSchema: {
           type: "object",
@@ -201,7 +201,7 @@ export async function registerCollectionTools(reg: ToolRegistry): Promise<void> 
     reg.register({
       requiredScope: "mcp:write",
       definition: {
-        name: `vaultbase.create_${slug}`,
+        name: `cogworks.create_${slug}`,
         description: `Create a new '${slug}' record. Validation + collection rules (create_rule) apply. Returns the created record with server-assigned id + timestamps.`,
         inputSchema: {
           type: "object",
@@ -228,7 +228,7 @@ export async function registerCollectionTools(reg: ToolRegistry): Promise<void> 
     reg.register({
       requiredScope: "mcp:write",
       definition: {
-        name: `vaultbase.update_${slug}`,
+        name: `cogworks.update_${slug}`,
         description: `Update an existing '${slug}' record. PATCH semantics — only provided fields are touched. Validation + update_rule apply.`,
         inputSchema: {
           type: "object",
@@ -257,7 +257,7 @@ export async function registerCollectionTools(reg: ToolRegistry): Promise<void> 
     reg.register({
       requiredScope: "mcp:write",
       definition: {
-        name: `vaultbase.delete_${slug}`,
+        name: `cogworks.delete_${slug}`,
         description: `Delete a '${slug}' record by id. delete_rule + cascade behaviour apply per the collection schema.`,
         inputSchema: {
           type: "object",

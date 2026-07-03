@@ -256,7 +256,7 @@ export function makeNotificationsPlugin(jwtSecret: string) {
           const body = c.req.valid("json");
           const providers = body.providers?.filter(isProviderName) ?? undefined;
           const payload: NotificationPayload = {
-            title: body.title ?? "Vaultbase test",
+            title: body.title ?? "Cogworks test",
             body: body.body ?? `Test sent at ${new Date().toISOString()}`,
             data: body.data ?? { _vbtest: true },
           };

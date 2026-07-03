@@ -26,7 +26,7 @@ let tmpDir: string;
 let fetch: (req: Request) => Response | Promise<Response>;
 
 beforeEach(async () => {
-  tmpDir = mkdtempSync(join(tmpdir(), "vaultbase-srv-err-"));
+  tmpDir = mkdtempSync(join(tmpdir(), "cogworks-srv-err-"));
   setLogsDir(tmpDir);
   initDb(join(tmpDir, "data.db"));
   await runMigrations();

@@ -23,7 +23,7 @@ function mk(overrides: Partial<LogEntry>): LogEntry {
 }
 
 beforeEach(() => {
-  tmpDir = mkdtempSync(join(tmpdir(), "vaultbase-logs-rule-"));
+  tmpDir = mkdtempSync(join(tmpdir(), "cogworks-logs-rule-"));
   setLogsDir(tmpDir);
 });
 

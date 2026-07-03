@@ -305,7 +305,7 @@ interface SchemaForeignKey {
 interface SchemaTable {
   name: string;
   type: "table" | "view";
-  /** Convention-flag: cw_ tables back vaultbase collections; cogworks_ tables are system; sqlite_ tables are SQLite internal. */
+  /** Convention-flag: cw_ tables back cogworks collections; cogworks_ tables are system; sqlite_ tables are SQLite internal. */
   kind: "collection" | "system" | "user" | "sqlite";
   collectionName?: string;
   columns: SchemaColumn[];

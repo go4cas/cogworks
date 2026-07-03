@@ -175,7 +175,7 @@ export const CommandPalette: React.FC<{
         <div className="cmd-foot">
           <span className="kbd-key">↑↓</span> navigate
           <span style={{ marginLeft: 12 }}><span className="kbd-key">⏎</span> select</span>
-          <span style={{ marginLeft: "auto" }}>vaultbase ⌘K</span>
+          <span style={{ marginLeft: "auto" }}>cogworks ⌘K</span>
         </div>
       </div>
     </div>,

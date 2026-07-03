@@ -19,7 +19,7 @@ const ISSUER = "cogworks";
 let tmpDir: string;
 
 beforeEach(async () => {
-  tmpDir = mkdtempSync(join(tmpdir(), "vaultbase-batch-rules-"));
+  tmpDir = mkdtempSync(join(tmpdir(), "cogworks-batch-rules-"));
   setLogsDir(tmpDir);
   initDb(":memory:");
   await runMigrations();

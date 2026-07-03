@@ -52,7 +52,7 @@ interface SettingsGroup {
   items: SettingsTab[];
 }
 
-// Semantic grouping per the redesign handoff (vaultbase/project/shell.jsx).
+// Semantic grouping per the redesign handoff (cogworks/project/shell.jsx).
 const SETTINGS_GROUPS: SettingsGroup[] = [
   { group: "General", items: [
     { id: "application", label: "Application", subtitle: "runtime configuration" },
@@ -262,11 +262,11 @@ export default function Settings() {
 function ApplicationSection() {
   return (
     <SectionShell id="application">
-      <VbField label="Port" hint={<>Set via <VbCode>VAULTBASE_PORT</VbCode></>}>
+      <VbField label="Port" hint={<>Set via <VbCode>COGWORKS_PORT</VbCode></>}>
         <VbInput mono defaultValue="8091" disabled />
       </VbField>
-      <VbField label="Data directory" hint={<>Set via <VbCode>VAULTBASE_DATA_DIR</VbCode></>}>
-        <VbInput mono defaultValue="./vaultbase_data" disabled />
+      <VbField label="Data directory" hint={<>Set via <VbCode>COGWORKS_DATA_DIR</VbCode></>}>
+        <VbInput mono defaultValue="./cogworks_data" disabled />
       </VbField>
       <VbField label="JWT secret" hint={<>Auto-generated. Stored in <VbCode>data_dir/.secret</VbCode></>}>
         <VbInput mono value="••••••••••••••••••••••••••••••••" disabled />
@@ -829,7 +829,7 @@ function CorsSection() {
           <Icon name="alert" size={13} />
           <span>
             <VbCode>*</VbCode> origin + credentials is not permitted by browsers.
-            Vaultbase will echo the matched origin instead.
+            Cogworks will echo the matched origin instead.
           </span>
         </div>
       )}
@@ -1041,7 +1041,7 @@ function BruteForceCard() {
         <div style={{ fontSize: 11.5, color: "var(--vb-fg-3)", lineHeight: 1.55 }}>
           Tracks both <VbCode>email:&lt;addr&gt;</VbCode> and <VbCode>ip:&lt;addr&gt;</VbCode> keys so a
           spray attack across emails from one IP gets caught alongside a single-account attack.
-          Per-IP keying requires <VbCode>VAULTBASE_TRUSTED_PROXIES</VbCode> (or the proxies card below)
+          Per-IP keying requires <VbCode>COGWORKS_TRUSTED_PROXIES</VbCode> (or the proxies card below)
           to surface real client IPs through your reverse proxy.
         </div>
         <div style={{
@@ -1093,9 +1093,9 @@ function TrustedProxiesCard() {
           label="Allowed proxy CIDRs (comma-separated)"
           hint={
             <>
-              Empty + no <VbCode>VAULTBASE_TRUSTED_PROXIES</VbCode> env → vaultbase ignores{" "}
+              Empty + no <VbCode>COGWORKS_TRUSTED_PROXIES</VbCode> env → cogworks ignores{" "}
               <VbCode>X-Forwarded-For</VbCode> entirely (defensive default). Set this when your
-              reverse proxy / load balancer sits in front of vaultbase.
+              reverse proxy / load balancer sits in front of cogworks.
             </>
           }
         >
@@ -1166,7 +1166,7 @@ function FingerprintsCard() {
             }}>
               <Icon name="alert" size={13} />
               <span>
-                No <VbCode>VAULTBASE_ENCRYPTION_KEY</VbCode> set — fields marked{" "}
+                No <VbCode>COGWORKS_ENCRYPTION_KEY</VbCode> set — fields marked{" "}
                 <VbCode>encrypted</VbCode> store plaintext.
               </span>
             </div>
@@ -1210,7 +1210,7 @@ function HeadersPreviewCard() {
   }
 
   return (
-    <SubCard title="Security headers" meta="read-only · what vaultbase emits per response">
+    <SubCard title="Security headers" meta="read-only · what cogworks emits per response">
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <VbField label="API responses">{renderTable(preview?.api)}</VbField>
         <VbField
@@ -1526,7 +1526,7 @@ function UpdatesSection() {
 
       {status?.update_available && status.latest_version && (
         <a
-          href={`https://github.com/vaultbase-sh/vaultbase/releases/tag/${status.latest_version}`}
+          href={`https://github.com/go4cas/cogworks/releases/tag/${status.latest_version}`}
           target="_blank"
           rel="noopener noreferrer"
           style={{
@@ -1559,9 +1559,9 @@ function UpdatesSection() {
       )}
 
       <div style={{ fontSize: 11.5, color: "var(--vb-fg-3)", lineHeight: 1.6 }}>
-        Polls <VbCode>api.github.com/repos/vaultbase-sh/vaultbase/releases/latest</VbCode> on boot
+        Polls <VbCode>api.github.com/repos/go4cas/cogworks/releases/latest</VbCode> on boot
         (after a 30 s delay) and every 6 hours. Disable to silence the poller — no banner, no
-        network call. Vaultbase never auto-updates; this is purely a notification.
+        network call. Cogworks never auto-updates; this is purely a notification.
       </div>
 
       <div style={{
@@ -1594,7 +1594,7 @@ function BackupSection() {
         if (!r.ok) throw new Error(`Failed: ${r.status}`);
         const cd = r.headers.get("content-disposition") ?? "";
         const m = cd.match(/filename="([^"]+)"/);
-        const filename = m?.[1] ?? "vaultbase-backup.db";
+        const filename = m?.[1] ?? "cogworks-backup.db";
         return r.blob().then((blob) => ({ blob, filename }));
       })
       .then(({ blob, filename }) => {
@@ -1796,7 +1796,7 @@ function SmtpSection() {
 
         <VbField label="From address" hint={<>Sender used in <VbCode>From:</VbCode> header</>}>
           <VbInput mono value={from} onChange={(e) => setFrom(e.target.value)}
-            placeholder='"Vaultbase" <noreply@example.com>' disabled={!enabled || loading} />
+            placeholder='"Cogworks" <noreply@example.com>' disabled={!enabled || loading} />
         </VbField>
       </div>
 
@@ -2561,7 +2561,7 @@ function MigrationsSection() {
         if (!r.ok) throw new Error(`Failed: ${r.status}`);
         const cd = r.headers.get("content-disposition") ?? "";
         const m = cd.match(/filename="([^"]+)"/);
-        const filename = m?.[1] ?? "vaultbase-snapshot.json";
+        const filename = m?.[1] ?? "cogworks-snapshot.json";
         return r.blob().then((blob) => ({ blob, filename }));
       })
       .then(({ blob, filename }) => {
@@ -3021,9 +3021,9 @@ function StorageSection() {
           </VbField>
 
           <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: 14 }}>
-            <VbField label="Bucket" hint="Must exist already. Vaultbase does not create buckets.">
+            <VbField label="Bucket" hint="Must exist already. Cogworks does not create buckets.">
               <VbInput mono value={bucket} onChange={(e) => setBucket(e.target.value)}
-                placeholder="vaultbase-uploads" />
+                placeholder="cogworks-uploads" />
             </VbField>
             <VbField label="Region" hint={<>R2: <VbCode>auto</VbCode>. AWS: e.g. <VbCode>us-east-1</VbCode>.</>}>
               <VbInput mono value={region} onChange={(e) => setRegion(e.target.value)}
@@ -3038,7 +3038,7 @@ function StorageSection() {
             </VbField>
             <VbField
               label="Secret access key"
-              hint="Stored encrypted at rest when VAULTBASE_ENCRYPTION_KEY is set."
+              hint="Stored encrypted at rest when COGWORKS_ENCRYPTION_KEY is set."
             >
               <VbSecretInput value={secretAccessKey}
                 onChange={(e) => setSecretAccessKey(e.target.value)}
@@ -3048,7 +3048,7 @@ function StorageSection() {
 
           <VbField
             label="Public URL"
-            hint="Optional. If your bucket is fronted by a CDN, files link directly to it. Leave blank to proxy bytes through Vaultbase."
+            hint="Optional. If your bucket is fronted by a CDN, files link directly to it. Leave blank to proxy bytes through Cogworks."
           >
             <VbInput mono value={publicUrl} onChange={(e) => setPublicUrl(e.target.value)}
               placeholder="https://cdn.example.com" />
@@ -3270,7 +3270,7 @@ function NotificationsSection() {
       sub={
         <>
           Trigger code is provider-agnostic — call <VbCode>helpers.notify(userId, payload)</VbCode> from a hook and
-          Vaultbase fans out to every enabled provider via the <VbCode>_notify</VbCode> queue.
+          Cogworks fans out to every enabled provider via the <VbCode>_notify</VbCode> queue.
         </>
       }
       right={
@@ -3639,7 +3639,7 @@ const FCMFields: React.FC<{
         >
           <Icon name="eye" size={12} /> {p.showSa ? "Mask" : "Show"} pasted JSON
         </button>
-        <span>Stored encrypted at rest when <VbCode>VAULTBASE_ENCRYPTION_KEY</VbCode> is set.</span>
+        <span>Stored encrypted at rest when <VbCode>COGWORKS_ENCRYPTION_KEY</VbCode> is set.</span>
       </div>
     </VbField>
     <InlineTestSend
@@ -3678,11 +3678,11 @@ const InlineTestSend: React.FC<{
   }}>
     <Icon name="send" size={13} />
     <span style={{ fontSize: 12, color: "var(--vb-fg-2)", whiteSpace: "nowrap" }}>
-      Send <VbCode>"Vaultbase test"</VbCode> via {providerName} to
+      Send <VbCode>"Cogworks test"</VbCode> via {providerName} to
     </span>
     <VbInput
       mono
-      placeholder="user id (vaultbase)"
+      placeholder="user id (cogworks)"
       value={uid}
       onChange={(e) => onUid(e.target.value)}
       style={{ height: 28, flex: "1 1 200px", minWidth: 160 }}

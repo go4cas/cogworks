@@ -1,12 +1,12 @@
-# Vaultbase Security Model
+# Cogworks Security Model
 
 ## Trust boundaries
 
-Vaultbase has three principal classes:
+Cogworks has three principal classes:
 
 1. **Anonymous / unauthenticated** — public records only (`view_rule = null`).
 2. **User** (auth-collection JWT) — gated by per-collection rule expressions.
-3. **Admin** (`vaultbase_admin` row) — bypasses all rule checks; can author hooks, custom routes, scheduled jobs, queue workers, view collections. Admins are trusted with code execution on the host process.
+3. **Admin** (`cogworks_admin` row) — bypasses all rule checks; can author hooks, custom routes, scheduled jobs, queue workers, view collections. Admins are trusted with code execution on the host process.
 
 Treat the admin role as **operator-equivalent**. Compromise of any admin account is equivalent to root on the box.
 
@@ -14,11 +14,11 @@ Treat the admin role as **operator-equivalent**. Compromise of any admin account
 
 Each of these compiles admin-supplied JS via `new AsyncFunction("ctx", code)` and runs it in the same process as the API server:
 
-- **Hooks** — `vaultbase/src/core/hooks.ts` — fired on record create/update/delete.
-- **Custom routes** — `vaultbase/src/core/routes.ts` — mounted under `/api/custom/<path>`.
-- **Cron jobs** — `vaultbase/src/core/jobs.ts` — scheduled execution.
-- **Queue workers** — `vaultbase/src/core/queues.ts` — pulled from the `vaultbase_jobs_log` queue.
-- **View collections** — `vaultbase/src/core/collections.ts::createUserView` — admin-supplied SQL backs a `CREATE VIEW`. The `validateViewQuery` guard rejects DDL/DML keywords and obvious abuse, but a determined admin can still read sensitive tables in their `SELECT`.
+- **Hooks** — `cogworks/src/core/hooks.ts` — fired on record create/update/delete.
+- **Custom routes** — `cogworks/src/core/routes.ts` — mounted under `/api/custom/<path>`.
+- **Cron jobs** — `cogworks/src/core/jobs.ts` — scheduled execution.
+- **Queue workers** — `cogworks/src/core/queues.ts` — pulled from the `cogworks_jobs_log` queue.
+- **View collections** — `cogworks/src/core/collections.ts::createUserView` — admin-supplied SQL backs a `CREATE VIEW`. The `validateViewQuery` guard rejects DDL/DML keywords and obvious abuse, but a determined admin can still read sensitive tables in their `SELECT`.
 
 Each compiled function gets a `helpers` object including `helpers.http` /
 `helpers.fetch` (untrusted-network egress) and `helpers.query` (passes through
@@ -39,7 +39,7 @@ Operator overrides via Settings:
   without disabling the rest of the loopback block.
 
 The guard is defense-in-depth — it does not replace kernel-level egress
-filtering. For hardened deployments still run vaultbase under a network
+filtering. For hardened deployments still run cogworks under a network
 namespace / nftables egress filter as belt-and-braces. Known limitation:
 DNS rebinding (attacker controls the hostname's DNS, flips the answer
 between our resolve check and `fetch()`'s internal resolve). Use
@@ -55,11 +55,11 @@ SQLite rule engine, not the network.
 
 ## Token lifecycle
 
-JWTs are HS256 signed with `VAULTBASE_JWT_SECRET` (or a generated `<dataDir>/.secret` fallback at mode 0600). Every token now carries:
+JWTs are HS256 signed with `COGWORKS_JWT_SECRET` (or a generated `<dataDir>/.secret` fallback at mode 0600). Every token now carries:
 
-- `iss = "vaultbase"` (verified)
+- `iss = "cogworks"` (verified)
 - `aud` ∈ {`admin`, `user`, `file`}
-- `jti` (UUID) — checked against `vaultbase_token_revocations` on every verify
+- `jti` (UUID) — checked against `cogworks_token_revocations` on every verify
 - `iat`, `exp`
 
 Verification path is centralized in `core/sec.ts::verifyAuthToken` and rechecks:
@@ -73,7 +73,7 @@ To force-logout every admin (after suspected compromise), update `password_reset
 
 ## Storage hardening
 
-Local filesystem mode validates uploaded filenames as `^[uuid]\.[ext]{1,12}$` and resolves every path inside `vaultbase_data/uploads`. Path-traversal attempts are rejected at the storage layer (`core/storage.ts::safeLocalPath`).
+Local filesystem mode validates uploaded filenames as `^[uuid]\.[ext]{1,12}$` and resolves every path inside `cogworks_data/uploads`. Path-traversal attempts are rejected at the storage layer (`core/storage.ts::safeLocalPath`).
 
 Files served via `GET /api/files/:filename` always evaluate the parent record's `view_rule` regardless of whether the field is `protected`. Image MIME types render inline; everything else gets `Content-Disposition: attachment` plus `X-Content-Type-Options: nosniff` to neutralize stored-XSS via uploaded HTML/SVG.
 
@@ -81,17 +81,17 @@ Files served via `GET /api/files/:filename` always evaluate the parent record's 
 
 `/realtime` (WebSocket) and `GET /api/realtime` (SSE) reject upgrades whose `Origin` is not in the `cors.origins` setting (comma-separated; configured in Admin → Settings → CORS). Empty setting = same-origin only; `*` permits any origin. This is the same allowlist used for HTTP CORS, so cross-origin browsers, WebSocket, and SSE are all governed by one key.
 
-Cross-origin API consumers should set `cors.origins` (and the rest of the `cors.*` settings) — Vaultbase applies CORS natively, no front proxy plugin required.
+Cross-origin API consumers should set `cors.origins` (and the rest of the `cors.*` settings) — Cogworks applies CORS natively, no front proxy plugin required.
 
 ## Rate-limiting and proxy trust
 
-Per-IP token-bucket rate limiting honors `X-Forwarded-For` only when the immediate peer is in the `VAULTBASE_TRUSTED_PROXIES` env (CIDR-equivalent, comma-separated). Otherwise the socket peer IP is used. **Set this env when running behind Cloudflare, AWS ALB, nginx, etc.** — leaving it unset means a hostile client cannot spoof XFF, but any proxy-derived IP also won't be honored.
+Per-IP token-bucket rate limiting honors `X-Forwarded-For` only when the immediate peer is in the `COGWORKS_TRUSTED_PROXIES` env (CIDR-equivalent, comma-separated). Otherwise the socket peer IP is used. **Set this env when running behind Cloudflare, AWS ALB, nginx, etc.** — leaving it unset means a hostile client cannot spoof XFF, but any proxy-derived IP also won't be honored.
 
-**Cluster mode:** rate-limit buckets are **per worker process**. Under `vaultbase cluster` (N workers), a client spread across workers can reach up to N× a rule's `max` in aggregate — a deliberate trade-off to keep a DB write off the `/api/*` hot path. Auth brute-force is unaffected: it is gated by the **DB-backed login lockout** (shared across workers), not the token-bucket limiter. For strict per-IP API limits across a cluster, enforce them at the reverse proxy in front of the workers.
+**Cluster mode:** rate-limit buckets are **per worker process**. Under `cogworks cluster` (N workers), a client spread across workers can reach up to N× a rule's `max` in aggregate — a deliberate trade-off to keep a DB write off the `/api/*` hot path. Auth brute-force is unaffected: it is gated by the **DB-backed login lockout** (shared across workers), not the token-bucket limiter. For strict per-IP API limits across a cluster, enforce them at the reverse proxy in front of the workers.
 
 ## Setup hardening
 
-`POST /api/admin/setup` accepts the `X-Setup-Key` header when `VAULTBASE_SETUP_KEY` is set. Use this on first boot to close the race where an attacker reaches `/setup` before the operator on a public IP. Print the key from the operator's terminal (e.g., `openssl rand -hex 32`) and pass it on the request.
+`POST /api/admin/setup` accepts the `X-Setup-Key` header when `COGWORKS_SETUP_KEY` is set. Use this on first boot to close the race where an attacker reaches `/setup` before the operator on a public IP. Print the key from the operator's terminal (e.g., `openssl rand -hex 32`) and pass it on the request.
 
 The setup endpoint also enforces a 12-character minimum password and atomically refuses if a concurrent setup landed first.
 
@@ -103,12 +103,12 @@ The setup endpoint also enforces a 12-character minimum password and atomically 
 
 ## Hardening checklist for production
 
-- Set `VAULTBASE_JWT_SECRET` (don't rely on `.secret` fallback).
-- Set `VAULTBASE_SETUP_KEY` on first boot. Unset after creating the seed admin.
-- Set `VAULTBASE_TRUSTED_PROXIES` to your front-door peer IPs.
+- Set `COGWORKS_JWT_SECRET` (don't rely on `.secret` fallback).
+- Set `COGWORKS_SETUP_KEY` on first boot. Unset after creating the seed admin.
+- Set `COGWORKS_TRUSTED_PROXIES` to your front-door peer IPs.
 - Set `cors.origins` (Admin → Settings → CORS) for the admin SPA / user app origins.
-- Set `VAULTBASE_ENCRYPTION_KEY` (AES-GCM, 32 bytes base64) if any field type is `encrypted`.
+- Set `COGWORKS_ENCRYPTION_KEY` (AES-GCM, 32 bytes base64) if any field type is `encrypted`.
 - Configure `oauth2.<provider>.allowed_redirect_uris` for every enabled IdP.
 - Front the binary with TLS termination that sets HSTS; the static landing/docs CF Pages projects already set `Strict-Transport-Security`.
-- Restrict `vaultbase_data/` filesystem permissions to the running user (`chmod 700`).
+- Restrict `cogworks_data/` filesystem permissions to the running user (`chmod 700`).
 - Rotate the JWT secret after any suspected compromise: stop the server, delete `.secret` (or change the env), restart. All sessions end.

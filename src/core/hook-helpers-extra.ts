@@ -59,7 +59,7 @@ export interface SecurityHelpers {
       audience?: string;
     },
   ): Promise<Record<string, unknown>>;
-  /** Encrypt with the server-configured AES-GCM key (uses VAULTBASE_ENCRYPTION_KEY). */
+  /** Encrypt with the server-configured AES-GCM key (uses COGWORKS_ENCRYPTION_KEY). */
   aesEncrypt(plaintext: string): Promise<string>;
   /** Decrypt a value previously produced by `aesEncrypt`. */
   aesDecrypt(ciphertext: string): Promise<string>;

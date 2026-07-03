@@ -45,7 +45,7 @@ function mkApp(): Hono {
 }
 
 beforeEach(async () => {
-  tmpDir = mkdtempSync(join(tmpdir(), "vaultbase-cs-"));
+  tmpDir = mkdtempSync(join(tmpdir(), "cogworks-cs-"));
   setLogsDir(tmpDir);
   initDb(":memory:");
   await runMigrations();

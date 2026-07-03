@@ -5,7 +5,7 @@ import { JSONPath } from "jsonpath-plus";
 
 /**
  * Append-only file logger. Writes one JSON object per line (JSONL) to
- * `<logsDir>/YYYY-MM-DD.jsonl`. Files are never deleted by Vaultbase —
+ * `<logsDir>/YYYY-MM-DD.jsonl`. Files are never deleted by Cogworks —
  * external rotation/archival is the operator's responsibility.
  */
 

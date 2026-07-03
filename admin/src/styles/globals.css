@@ -1,5 +1,5 @@
 /* ─────────────────────────────────────────────────────────────────────────────
- * Vaultbase admin — design tokens (vaultbase brand & design system v1.0)
+ * Cogworks admin — design tokens (cogworks brand & design system v1.0)
  *
  * Spec values — every hex below comes straight from the system reference. Do
  * not soften or remap; the surface ladder, type-mapped colors, and motion
@@ -935,7 +935,7 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* Sidebar ----------------------------------------------------------------- */
-/* ── Sidebar — vaultbase v0.9 redesign (Notifications handoff) ───────────── */
+/* ── Sidebar — cogworks v0.9 redesign (Notifications handoff) ───────────── */
 .sidebar {
   width: 200px;
   background: var(--vb-bg-2);

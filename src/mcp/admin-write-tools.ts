@@ -43,7 +43,7 @@ export function registerAdminWriteTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:admin",
     definition: {
-      name: "vaultbase.create_collection",
+      name: "cogworks.create_collection",
       description:
         "Create a new collection (base/auth/view). Pass fields as a JSON-shaped FieldDef[] array. Optional rules: list/view/create/update/delete. Returns the created collection row.",
       inputSchema: {
@@ -101,7 +101,7 @@ export function registerAdminWriteTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:admin",
     definition: {
-      name: "vaultbase.alter_collection",
+      name: "cogworks.alter_collection",
       description:
         "Update a collection: rename, alter rules, replace the field set. Field changes ALTER TABLE the underlying SQL table — risky on populated collections, validate the change in dev first.",
       inputSchema: {
@@ -147,7 +147,7 @@ export function registerAdminWriteTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:admin",
     definition: {
-      name: "vaultbase.delete_collection",
+      name: "cogworks.delete_collection",
       description:
         "Drop a collection — drops the underlying cw_<name> table. Cascade rules on referencing relation fields fire as configured. Irreversible.",
       inputSchema: {
@@ -171,7 +171,7 @@ export function registerAdminWriteTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:read",
     definition: {
-      name: "vaultbase.list_hooks",
+      name: "cogworks.list_hooks",
       description:
         "List every server-side JS hook (before/after × CRUD). Returns id, name, collection, event, enabled flag, and the source code.",
       inputSchema: { type: "object", properties: {}, additionalProperties: false },
@@ -182,7 +182,7 @@ export function registerAdminWriteTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:admin",
     definition: {
-      name: "vaultbase.create_hook",
+      name: "cogworks.create_hook",
       description:
         "Register a new JS hook. Code is admin-trusted and runs in-process via `new AsyncFunction('ctx', code)` — has access to the full helper standard library (db, fs, http, mails, flags, webhooks). Hook lifecycle events are camelCase (beforeCreate / afterCreate / …).",
       inputSchema: {
@@ -248,7 +248,7 @@ export function registerAdminWriteTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:admin",
     definition: {
-      name: "vaultbase.update_hook",
+      name: "cogworks.update_hook",
       description: "Patch an existing hook by id.",
       inputSchema: {
         type: "object",
@@ -285,7 +285,7 @@ export function registerAdminWriteTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:admin",
     definition: {
-      name: "vaultbase.delete_hook",
+      name: "cogworks.delete_hook",
       description: "Delete a hook by id.",
       inputSchema: {
         type: "object",
@@ -308,7 +308,7 @@ export function registerAdminWriteTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:read",
     definition: {
-      name: "vaultbase.list_routes",
+      name: "cogworks.list_routes",
       description:
         "List custom HTTP routes admins have authored (mounted under /api/v1/custom/<path>).",
       inputSchema: { type: "object", properties: {}, additionalProperties: false },
@@ -319,7 +319,7 @@ export function registerAdminWriteTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:admin",
     definition: {
-      name: "vaultbase.create_route",
+      name: "cogworks.create_route",
       description:
         "Author a new custom HTTP route. Mounted at /api/v1/custom/<path>. Code receives ctx (req/params/query/body/auth/helpers/set).",
       inputSchema: {
@@ -367,7 +367,7 @@ export function registerAdminWriteTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:admin",
     definition: {
-      name: "vaultbase.delete_route",
+      name: "cogworks.delete_route",
       description: "Delete a custom route by id.",
       inputSchema: {
         type: "object",
@@ -390,7 +390,7 @@ export function registerAdminWriteTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:read",
     definition: {
-      name: "vaultbase.list_jobs",
+      name: "cogworks.list_jobs",
       description: "List cron jobs (UTC schedule + admin-authored body).",
       inputSchema: { type: "object", properties: {}, additionalProperties: false },
     },
@@ -400,7 +400,7 @@ export function registerAdminWriteTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:admin",
     definition: {
-      name: "vaultbase.create_job",
+      name: "cogworks.create_job",
       description:
         "Author a new cron job. cron is a 5-field UTC expression. mode 'inline' runs the body in the cron tick; 'worker:<queue>' enqueues onto a queue worker.",
       inputSchema: {
@@ -442,7 +442,7 @@ export function registerAdminWriteTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:admin",
     definition: {
-      name: "vaultbase.run_job_now",
+      name: "cogworks.run_job_now",
       description:
         "Run a cron job immediately, regardless of its schedule. Useful for debugging / one-shot scripted ops.",
       inputSchema: {
@@ -461,7 +461,7 @@ export function registerAdminWriteTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:admin",
     definition: {
-      name: "vaultbase.delete_job",
+      name: "cogworks.delete_job",
       description: "Delete a cron job by id.",
       inputSchema: {
         type: "object",
@@ -484,7 +484,7 @@ export function registerAdminWriteTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:read",
     definition: {
-      name: "vaultbase.evaluate_flag",
+      name: "cogworks.evaluate_flag",
       description:
         "Evaluate a feature flag against a context object. Returns the resolved value (bool/string/number/json) plus the rule that won.",
       inputSchema: {
@@ -513,7 +513,7 @@ export function registerAdminWriteTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:admin",
     definition: {
-      name: "vaultbase.update_flag",
+      name: "cogworks.update_flag",
       description:
         "Upsert a feature flag — type, default value, rules, variations. Existing flag at this key is replaced wholesale.",
       inputSchema: {
@@ -550,7 +550,7 @@ export function registerAdminWriteTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:admin",
     definition: {
-      name: "vaultbase.delete_flag",
+      name: "cogworks.delete_flag",
       description: "Delete a feature flag by key.",
       inputSchema: {
         type: "object",
@@ -570,7 +570,7 @@ export function registerAdminWriteTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:read",
     definition: {
-      name: "vaultbase.list_webhooks",
+      name: "cogworks.list_webhooks",
       description:
         "List configured webhooks (URL, events, retry config, secret). Secret values are NOT redacted — treat the response as sensitive.",
       inputSchema: { type: "object", properties: {}, additionalProperties: false },
@@ -581,7 +581,7 @@ export function registerAdminWriteTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:write",
     definition: {
-      name: "vaultbase.dispatch_webhook_event",
+      name: "cogworks.dispatch_webhook_event",
       description:
         "Fire a custom webhook event. Subscribers matching the event pattern receive an HMAC-signed POST. Use to test integrations without creating a real record.",
       inputSchema: {
@@ -612,7 +612,7 @@ export function registerAdminWriteTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:admin",
     definition: {
-      name: "vaultbase.list_settings",
+      name: "cogworks.list_settings",
       description:
         "List every setting key/value. Encrypted-at-rest keys are decrypted in this response (admin-equivalent visibility) — requires mcp:admin scope.",
       inputSchema: { type: "object", properties: {}, additionalProperties: false },
@@ -623,7 +623,7 @@ export function registerAdminWriteTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:admin",
     definition: {
-      name: "vaultbase.get_setting",
+      name: "cogworks.get_setting",
       description:
         "Read a single setting by key. Returns the (decrypted, when applicable) value — requires mcp:admin scope.",
       inputSchema: {
@@ -642,7 +642,7 @@ export function registerAdminWriteTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:admin",
     definition: {
-      name: "vaultbase.update_setting",
+      name: "cogworks.update_setting",
       description:
         "Write a setting key. Encryption-at-rest applies automatically for known sensitive keys (smtp.password, oauth2.<provider>.client_secret, etc).",
       inputSchema: {
@@ -666,7 +666,7 @@ export function registerAdminWriteTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:sql",
     definition: {
-      name: "vaultbase.run_sql",
+      name: "cogworks.run_sql",
       description:
         "Run a raw SQL query against the live SQLite DB. Read-only by default — write/DDL queries require `allow_write: true` and tear through every safety net (RBAC, validation, hooks, audit). Avoid unless absolutely necessary; use the typed tools instead. Bound result set: 100 rows.\n\nSchema convention: every collection (base + auth) has a `cw_<name>` table. Auth collections additionally have inline columns for `email`, `password_hash`, `email_verified`, `totp_secret`, `totp_enabled`, `is_anonymous`, `password_reset_at`. Inserting auth users via raw SQL bypasses password hashing + email-verification flows — prefer `POST /api/v1/auth/<col>/register` (or the existing typed CRUD path) for login-capable users.",
       inputSchema: {
@@ -751,7 +751,7 @@ export function registerAdminWriteTools(reg: ToolRegistry): void {
   reg.register({
     requiredScope: "mcp:write",
     definition: {
-      name: "vaultbase.seed",
+      name: "cogworks.seed",
       description:
         "Generate fake records for a collection. Per-field-type defaults: text → Lorem-ipsum, number → bounded random, bool → coin flip, email → fake address, date/autodate → recent random, geoPoint → random world coords, select → random from values, relation → random existing target. Hard cap: 1000 records per call.",
       inputSchema: {

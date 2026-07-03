@@ -1,7 +1,7 @@
 /**
- * `vaultbase mcp` — Model Context Protocol server.
+ * `cogworks mcp` — Model Context Protocol server.
  *
- *   vaultbase mcp [--token vbat_…] [--read-only]
+ *   cogworks mcp [--token vbat_…] [--read-only]
  *
  * Boots a stdio MCP server that AI agents (Claude Desktop, Cursor,
  * Continue, ChatGPT plugins) can connect to. Auto-derives tools per
@@ -10,8 +10,8 @@
  *
  * Token lookup precedence:
  *   1. --token <vbat_…> argument
- *   2. VAULTBASE_MCP_TOKEN env
- *   3. VAULTBASE_API_TOKEN env
+ *   2. COGWORKS_MCP_TOKEN env
+ *   3. COGWORKS_API_TOKEN env
  *
  * Error exit codes:
  *   2 — bad / missing token
@@ -53,14 +53,14 @@ function parseFlags(argv: string[]): CliFlags {
 }
 
 function printHelp(): void {
-  process.stdout.write(`Usage: vaultbase mcp [flags]
+  process.stdout.write(`Usage: cogworks mcp [flags]
 
 Boots an MCP server over stdio. Connect AI agents (Claude Desktop, Cursor,
-Continue, ChatGPT) by registering vaultbase as an MCP server in their config.
+Continue, ChatGPT) by registering cogworks as an MCP server in their config.
 
 Flags:
   --token, -t <vbat_…>     API token. Required scope: mcp:read or higher.
-                           Falls back to VAULTBASE_MCP_TOKEN or VAULTBASE_API_TOKEN env.
+                           Falls back to COGWORKS_MCP_TOKEN or COGWORKS_API_TOKEN env.
   --read-only              Filter the registry to read-only tools, even if the
                            token has write scopes. Defence-in-depth for ad-hoc
                            debugging sessions.
@@ -74,7 +74,7 @@ or %APPDATA%\\Claude\\claude_desktop_config.json):
       "cogworks": {
         "command": "cogworks",
         "args": ["mcp"],
-        "env": { "VAULTBASE_MCP_TOKEN": "vbat_…" }
+        "env": { "COGWORKS_MCP_TOKEN": "vbat_…" }
       }
     }
   }
@@ -91,10 +91,10 @@ export async function runMcpCli(
   const flags = parseFlags(argv);
 
   const tokenRaw =
-    flags.token ?? process.env.VAULTBASE_MCP_TOKEN ?? process.env.VAULTBASE_API_TOKEN ?? null;
+    flags.token ?? process.env.COGWORKS_MCP_TOKEN ?? process.env.COGWORKS_API_TOKEN ?? null;
   if (!tokenRaw) {
     process.stderr.write(
-      `vaultbase mcp: no token provided. Pass --token vbat_…, or set VAULTBASE_MCP_TOKEN env.\n`,
+      `cogworks mcp: no token provided. Pass --token vbat_…, or set COGWORKS_MCP_TOKEN env.\n`,
     );
     process.exit(2);
   }
@@ -109,7 +109,7 @@ export async function runMcpCli(
   const ctx = await verifyAuthToken(stripApiTokenPrefix(tokenRaw), jwtSecret, { audience: "api" });
   if (!ctx?.viaApiToken) {
     process.stderr.write(
-      `vaultbase mcp: token verification failed. Mint a fresh token with \`vaultbase token mint --scope mcp:read\`.\n`,
+      `cogworks mcp: token verification failed. Mint a fresh token with \`cogworks token mint --scope mcp:read\`.\n`,
     );
     process.exit(2);
   }
@@ -120,8 +120,8 @@ export async function runMcpCli(
   const ok = hasScope(scopes, "mcp:read") || hasScope(scopes, "mcp:write");
   if (!ok) {
     process.stderr.write(
-      `vaultbase mcp: token lacks any mcp:* scope. Has: [${scopes.join(", ")}]. ` +
-        `Mint a new token with \`vaultbase token mint --scope mcp:read\` (or mcp:write/mcp:admin).\n`,
+      `cogworks mcp: token lacks any mcp:* scope. Has: [${scopes.join(", ")}]. ` +
+        `Mint a new token with \`cogworks token mint --scope mcp:read\` (or mcp:write/mcp:admin).\n`,
     );
     process.exit(3);
   }

@@ -114,7 +114,7 @@ export function resetSandbox(adminId: string, livePath: string): SandboxInfo {
       try {
         db.exec(obj.sql);
         if (obj.type === "table") {
-          // quoteIdent escapes embedded `"`. Tables created outside Vaultbase
+          // quoteIdent escapes embedded `"`. Tables created outside Cogworks
           // could conceivably have such names; the upstream `assertSqlIdent`
           // path can't (rejects quote chars), so this is defense-in-depth.
           const ident = quoteIdent(obj.name);

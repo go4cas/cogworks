@@ -11,7 +11,7 @@ import { routes } from "../db/schema.ts";
 let tmpDir: string;
 
 beforeEach(async () => {
-  tmpDir = mkdtempSync(join(tmpdir(), "vaultbase-routes-"));
+  tmpDir = mkdtempSync(join(tmpdir(), "cogworks-routes-"));
   setLogsDir(tmpDir);
   initDb(":memory:");
   await runMigrations();

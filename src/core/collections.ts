@@ -30,7 +30,7 @@ export interface FieldOptions {
   multiple?: boolean;
   maxSize?: number;
   mimeTypes?: string[];
-  /** Encrypt at rest (text/json types only). Requires VAULTBASE_ENCRYPTION_KEY. */
+  /** Encrypt at rest (text/json types only). Requires COGWORKS_ENCRYPTION_KEY. */
   encrypted?: boolean;
   /**
    * Relation-only. Behavior when the referenced target record is deleted:

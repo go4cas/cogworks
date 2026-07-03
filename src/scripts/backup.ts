@@ -1,5 +1,5 @@
 /**
- * `vaultbase backup --to <dest>` — atomic SQLite snapshot + push to a
+ * `cogworks backup --to <dest>` — atomic SQLite snapshot + push to a
  * destination URL.
  *
  * Snapshots use SQLite's `VACUUM INTO` so the result is a self-contained
@@ -43,7 +43,7 @@ function log(opts: BackupOpts, msg: string): void {
 }
 
 function die(msg: string, code = 1): never {
-  process.stderr.write(`vaultbase backup: ${msg}\n`);
+  process.stderr.write(`cogworks backup: ${msg}\n`);
   process.exit(code);
 }
 
@@ -59,7 +59,7 @@ export function parseBackupArgs(argv: string[]): BackupOpts {
     else if (a === "--quiet" || a === "-q") out.quiet = true;
     else if (a === "--help" || a === "-h") {
       process.stdout.write(
-        `Usage: vaultbase backup --to <dest> [--gzip] [--quiet]\n\n` +
+        `Usage: cogworks backup --to <dest> [--gzip] [--quiet]\n\n` +
           `Destinations:\n` +
           `  /path/file.db              local file\n` +
           `  file:///path/file.db       local file\n` +
@@ -67,9 +67,9 @@ export function parseBackupArgs(argv: string[]): BackupOpts {
           `  r2://bucket/key            Cloudflare R2 (creds + AWS_ENDPOINT_URL via env)\n` +
           `  b2://bucket/key            Backblaze B2 (creds + AWS_ENDPOINT_URL via env)\n\n` +
           `Examples:\n` +
-          `  vaultbase backup --to /var/backups/snap-$(date +%F).db\n` +
+          `  cogworks backup --to /var/backups/snap-$(date +%F).db\n` +
           `  AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... \\\n` +
-          `    vaultbase backup --to s3://my-bucket/vb/snap.db --gzip\n`,
+          `    cogworks backup --to s3://my-bucket/vb/snap.db --gzip\n`,
       );
       process.exit(0);
     } else die(`unknown flag: ${a}`);
@@ -121,7 +121,7 @@ async function snapshotDb(dbPath: string): Promise<string> {
   // Use a tmp path next to the source — same filesystem, so atomic rename
   // is cheap on the local-file path.
   const dir = dirname(dbPath);
-  const tmp = `${dir}/.vaultbase-snap-${process.pid}-${Date.now()}.db`;
+  const tmp = `${dir}/.cogworks-snap-${process.pid}-${Date.now()}.db`;
   // Open the source READ-ONLY, run VACUUM INTO. SQLite's VACUUM INTO is
   // a built-in atomic snapshot — it writes a new DB file with current
   // committed state, no WAL sidecars needed.

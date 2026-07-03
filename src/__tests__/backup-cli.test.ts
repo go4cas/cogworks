@@ -1,5 +1,5 @@
 /**
- * Test for `vaultbase backup --to <dest>` CLI subcommand.
+ * Test for `cogworks backup --to <dest>` CLI subcommand.
  *
  * Covers:
  *   - parseDestination dispatches file:// / bare path / s3:// / r2:// / b2://
@@ -74,7 +74,7 @@ describe("end-to-end: local snapshot", () => {
 
   beforeEach(async () => {
     tmpDir = mkdtempSync(join(tmpdir(), "vb-backup-"));
-    dbPath = join(tmpDir, "vaultbase.db");
+    dbPath = join(tmpDir, "cogworks.db");
     initDb(dbPath);
     await runMigrations();
     await getDb()

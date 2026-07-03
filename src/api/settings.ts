@@ -34,13 +34,13 @@ function rawClient(): Database {
 
 /**
  * Setting keys whose values look like secrets and should be AES-GCM-encrypted
- * at rest when `VAULTBASE_ENCRYPTION_KEY` is configured. The match is on the
+ * at rest when `COGWORKS_ENCRYPTION_KEY` is configured. The match is on the
  * full key's lowercased suffix — e.g. `smtp.password`, `oauth2.google.secret`,
  * `notifications.providers.fcm.service_account` all match.
  *
  * Encryption is opportunistic: if no key is configured, the value is stored
  * plaintext (with a one-time stderr warning per key) so existing deployments
- * keep working. Set `VAULTBASE_ENCRYPTION_KEY` to upgrade to at-rest crypto.
+ * keep working. Set `COGWORKS_ENCRYPTION_KEY` to upgrade to at-rest crypto.
  */
 const ENCRYPTED_KEY_SUFFIXES: readonly string[] = [
   ".password",
@@ -85,7 +85,7 @@ function maybeEncrypt(key: string, value: string): string {
     if (!warnedPlaintextKeys.has(key)) {
       warnedPlaintextKeys.add(key);
       process.stderr.write(
-        `[settings] "${key}" looks like a secret but VAULTBASE_ENCRYPTION_KEY ` +
+        `[settings] "${key}" looks like a secret but COGWORKS_ENCRYPTION_KEY ` +
           `is not set — storing plaintext. Set the env var to encrypt at rest.\n`,
       );
     }
@@ -103,7 +103,7 @@ function maybeDecrypt(key: string, value: string): string {
       warnedDecryptFails.add(key);
       const msg = e instanceof Error ? e.message : String(e);
       process.stderr.write(
-        `[settings] failed to decrypt "${key}" — VAULTBASE_ENCRYPTION_KEY ` +
+        `[settings] failed to decrypt "${key}" — COGWORKS_ENCRYPTION_KEY ` +
           `missing, wrong, or value corrupted (${msg}). Returning empty string.\n`,
       );
     }
@@ -202,7 +202,7 @@ export function makeSettingsPlugin(jwtSecret: string) {
         try {
           const info = await sendEmail({
             to: body.to,
-            subject: "Vaultbase SMTP test",
+            subject: "Cogworks SMTP test",
             text: "If you can read this, your SMTP settings are working.",
           });
           return c.json({ data: { messageId: info.messageId } });

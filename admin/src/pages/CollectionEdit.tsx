@@ -1086,7 +1086,7 @@ function FieldOptionsBody({
           />
           <OptionRow
             title="Encrypt at rest"
-            hint={<>AES-GCM. Disables filtering &amp; uniqueness on this field. Requires <SchemaCode>VAULTBASE_ENCRYPTION_KEY</SchemaCode>.</>}
+            hint={<>AES-GCM. Disables filtering &amp; uniqueness on this field. Requires <SchemaCode>COGWORKS_ENCRYPTION_KEY</SchemaCode>.</>}
             on={!!sel.options?.["encrypted"]}
             onChange={(v) => updateSelOptions({ encrypted: v })}
           />
@@ -1095,7 +1095,7 @@ function FieldOptionsBody({
       {sel.type === "json" && (
         <OptionRow
           title="Encrypt at rest"
-          hint={<>AES-GCM. Requires <SchemaCode>VAULTBASE_ENCRYPTION_KEY</SchemaCode>.</>}
+          hint={<>AES-GCM. Requires <SchemaCode>COGWORKS_ENCRYPTION_KEY</SchemaCode>.</>}
           on={!!sel.options?.["encrypted"]}
           onChange={(v) => updateSelOptions({ encrypted: v })}
         />

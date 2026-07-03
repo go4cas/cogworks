@@ -22,7 +22,7 @@ export function makeBackupPlugin(jwtSecret: string, dbPath: string) {
         return new Response(file, {
           headers: {
             "Content-Type": "application/octet-stream",
-            "Content-Disposition": `attachment; filename="vaultbase-backup-${stamp}.db"`,
+            "Content-Disposition": `attachment; filename="cogworks-backup-${stamp}.db"`,
           },
         });
       })

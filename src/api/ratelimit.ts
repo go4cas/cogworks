@@ -20,7 +20,7 @@ import { normalizeApiPath } from "../core/api-paths.ts";
  *
  * Skipped paths: admin UI assets, realtime WS, health, logs polling.
  *
- * ⚠ Cluster caveat: the token buckets are process-local. Under `vaultbase
+ * ⚠ Cluster caveat: the token buckets are process-local. Under `cogworks
  * cluster` (N worker processes, no shared limiter state), a client spread
  * across workers can reach up to N× a rule's `max` in aggregate. This is a
  * deliberate trade-off — a shared cross-worker counter would put a DB write on
@@ -52,7 +52,7 @@ const DEFAULT_RULES: RateLimitRule[] = [
   { label: "/api/*", max: 300, windowMs: 10000, audience: "all" },
 ];
 
-const DEFAULT_ENABLED = (process.env.VAULTBASE_RATE_ENABLED ?? "1") !== "0";
+const DEFAULT_ENABLED = (process.env.COGWORKS_RATE_ENABLED ?? "1") !== "0";
 
 const SKIP_PREFIXES = ["/_/", "/realtime", "/api/health", "/api/admin/logs"];
 function shouldSkip(path: string): boolean {
@@ -153,7 +153,7 @@ export function invalidateRateLimitCache(): void {
 
 function ipFromRequest(request: Request, peerIp: string | null): string {
   // Honor x-forwarded-for / x-real-ip ONLY when the immediate peer is in the
-  // configured `VAULTBASE_TRUSTED_PROXIES` list. Otherwise use the socket peer.
+  // configured `COGWORKS_TRUSTED_PROXIES` list. Otherwise use the socket peer.
   return trustedClientIp(request, peerIp);
 }
 

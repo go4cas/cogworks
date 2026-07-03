@@ -27,7 +27,7 @@ const SECRET = "test-secret-file-rules";
 let tmpDir: string;
 
 beforeEach(async () => {
-  tmpDir = mkdtempSync(join(tmpdir(), "vaultbase-file-rules-"));
+  tmpDir = mkdtempSync(join(tmpdir(), "cogworks-file-rules-"));
   setLogsDir(tmpDir);
   setUploadDir(tmpDir);
   invalidateStorageCache();

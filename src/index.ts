@@ -1,3 +1,4 @@
+import "./core/env-compat.ts";
 import { loadConfig } from "./config.ts";
 import { log } from "./core/log.ts";
 import { initDb, getDb } from "./db/client.ts";
@@ -31,7 +32,7 @@ interface CliFlags {
  */
 export function parseCliArgs(argv: string[]): CliFlags {
   const flags: CliFlags = { snapshotMode: "additive" };
-  // Sub-command form: `vaultbase setup-admin --email … --password …`.
+  // Sub-command form: `cogworks setup-admin --email … --password …`.
   if (argv[0] === "setup-admin") {
     let email = "";
     let password = "";
@@ -49,7 +50,7 @@ export function parseCliArgs(argv: string[]): CliFlags {
       } else if (arg === "--force") force = true;
       else if (arg === "--help" || arg === "-h") {
         process.stdout.write(
-          `Usage: vaultbase setup-admin --email <e> --password <p> [--force]\n` +
+          `Usage: cogworks setup-admin --email <e> --password <p> [--force]\n` +
             `\n` +
             `Bootstraps an admin account from the CLI — never exposes the web wizard.\n` +
             `Refuses to run when an admin already exists, unless --force is passed.\n`,
@@ -77,7 +78,7 @@ export function parseCliArgs(argv: string[]): CliFlags {
       if (v === "additive" || v === "sync") flags.snapshotMode = v;
       else {
         process.stderr.write(
-          `vaultbase: --snapshot-mode must be 'additive' or 'sync' (got '${v}')\n`,
+          `cogworks: --snapshot-mode must be 'additive' or 'sync' (got '${v}')\n`,
         );
         process.exit(1);
       }
@@ -88,7 +89,7 @@ export function parseCliArgs(argv: string[]): CliFlags {
         i++;
       } else {
         process.stderr.write(
-          `vaultbase: --snapshot-mode must be 'additive' or 'sync' (got '${String(next)}')\n`,
+          `cogworks: --snapshot-mode must be 'additive' or 'sync' (got '${String(next)}')\n`,
         );
         process.exit(1);
       }
@@ -103,15 +104,15 @@ async function setupAdminFromCli(opts: {
   force: boolean;
 }): Promise<void> {
   if (!opts.email || !opts.password) {
-    process.stderr.write(`vaultbase: setup-admin requires both --email and --password\n`);
+    process.stderr.write(`cogworks: setup-admin requires both --email and --password\n`);
     process.exit(1);
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(opts.email)) {
-    process.stderr.write(`vaultbase: --email is not a valid email address\n`);
+    process.stderr.write(`cogworks: --email is not a valid email address\n`);
     process.exit(1);
   }
   if (opts.password.length < 8) {
-    process.stderr.write(`vaultbase: --password must be at least 8 characters\n`);
+    process.stderr.write(`cogworks: --password must be at least 8 characters\n`);
     process.exit(1);
   }
   const db = getDb();
@@ -129,7 +130,7 @@ async function setupAdminFromCli(opts: {
 
   if (anyAdmin.length > 0 && !opts.force) {
     process.stderr.write(
-      `vaultbase: an admin already exists (${anyAdmin[0]?.email}). ` +
+      `cogworks: an admin already exists (${anyAdmin[0]?.email}). ` +
         `Re-run with --force to add another or reset the password of an existing admin.\n`,
     );
     process.exit(1);
@@ -145,7 +146,7 @@ async function setupAdminFromCli(opts: {
       .update(admin)
       .set({ password_hash: hash, password_reset_at: now })
       .where(eq(admin.email, opts.email));
-    process.stdout.write(`vaultbase: admin '${opts.email}' password reset.\n`);
+    process.stdout.write(`cogworks: admin '${opts.email}' password reset.\n`);
   } else {
     const id = crypto.randomUUID();
     await db.insert(admin).values({
@@ -155,14 +156,14 @@ async function setupAdminFromCli(opts: {
       password_reset_at: 0,
       created_at: now,
     });
-    process.stdout.write(`vaultbase: admin '${opts.email}' created.\n`);
+    process.stdout.write(`cogworks: admin '${opts.email}' created.\n`);
   }
 }
 
 async function applySnapshotFromCli(path: string, mode: ApplyMode): Promise<void> {
   const f = Bun.file(path);
   if (!(await f.exists())) {
-    process.stderr.write(`vaultbase: snapshot file not found: ${path}\n`);
+    process.stderr.write(`cogworks: snapshot file not found: ${path}\n`);
     process.exit(1);
   }
   let raw: string;
@@ -170,7 +171,7 @@ async function applySnapshotFromCli(path: string, mode: ApplyMode): Promise<void
     raw = await f.text();
   } catch (e) {
     process.stderr.write(
-      `vaultbase: cannot read snapshot file ${path}: ${e instanceof Error ? e.message : String(e)}\n`,
+      `cogworks: cannot read snapshot file ${path}: ${e instanceof Error ? e.message : String(e)}\n`,
     );
     process.exit(1);
   }
@@ -179,7 +180,7 @@ async function applySnapshotFromCli(path: string, mode: ApplyMode): Promise<void
     parsed = JSON.parse(raw);
   } catch (e) {
     process.stderr.write(
-      `vaultbase: snapshot file is not valid JSON: ${e instanceof Error ? e.message : String(e)}\n`,
+      `cogworks: snapshot file is not valid JSON: ${e instanceof Error ? e.message : String(e)}\n`,
     );
     process.exit(1);
   }
@@ -192,40 +193,40 @@ async function applySnapshotFromCli(path: string, mode: ApplyMode): Promise<void
     if (result.errors.length > 0) {
       for (const err of result.errors) {
         process.stderr.write(
-          `vaultbase: snapshot error in collection '${err.collection}': ${err.error}\n`,
+          `cogworks: snapshot error in collection '${err.collection}': ${err.error}\n`,
         );
       }
       process.exit(1);
     }
   } catch (e) {
     if (e instanceof SnapshotShapeError) {
-      process.stderr.write(`vaultbase: invalid snapshot: ${e.message}\n`);
+      process.stderr.write(`cogworks: invalid snapshot: ${e.message}\n`);
       process.exit(1);
     }
     throw e;
   }
 }
 
-const TOP_LEVEL_HELP = `vaultbase — self-hosted backend in a single binary
+const TOP_LEVEL_HELP = `cogworks — self-hosted backend in a single binary
 
 Usage:
-  vaultbase                       Start the HTTP server (default).
-  vaultbase <subcommand> [flags]
+  cogworks                       Start the HTTP server (default).
+  cogworks <subcommand> [flags]
 
 Subcommands:
   setup-admin                     Create or reset an admin account
                                   --email <e> --password <p> [--force]
 
   cluster                         Spawn N worker processes (multi-core deployments)
-                                  Set VAULTBASE_CLUSTER_WORKERS=N (default: CPU count).
+                                  Set COGWORKS_CLUSTER_WORKERS=N (default: CPU count).
 
   mcp                             Run the MCP server over stdio.
                                   Connect Claude Desktop / Cursor / Continue / Cline.
-                                  --token <vbat_…>           (or VAULTBASE_MCP_TOKEN env)
+                                  --token <vbat_…>           (or COGWORKS_MCP_TOKEN env)
                                   --read-only                Strip write tools regardless of scope.
 
   token                           API-token management (mint / list / revoke).
-                                  vaultbase token --help for subcommands.
+                                  cogworks token --help for subcommands.
 
   doctor                          Pre-flight DB checks for v0.11 auth migration.
                                   Read-only; exits non-zero on blockers.
@@ -246,16 +247,16 @@ Server flags:
   --version, -v                   Print version.
 
 Environment:
-  VAULTBASE_DATA_DIR              Data directory (default: ./cogworks_data)
-  VAULTBASE_PORT                  HTTP port (default: 8090)
-  VAULTBASE_HOST                  Bind host (default: 0.0.0.0)
-  VAULTBASE_JWT_SECRET            JWT signing secret (default: read from <dataDir>/.secret)
-  VAULTBASE_ENCRYPTION_KEY        Encrypted-fields key (default: read from <dataDir>/.encryption-key)
-  VAULTBASE_CLUSTER_WORKERS       Worker count for \`vaultbase cluster\`
-  VAULTBASE_TRUSTED_PROXIES       Comma-separated peer IPs trusted for X-Forwarded-For
-  NODE_ENV / VAULTBASE_ENV        Triggers production guardrails on \`wipe\`.
+  COGWORKS_DATA_DIR              Data directory (default: ./cogworks_data)
+  COGWORKS_PORT                  HTTP port (default: 8090)
+  COGWORKS_HOST                  Bind host (default: 0.0.0.0)
+  COGWORKS_JWT_SECRET            JWT signing secret (default: read from <dataDir>/.secret)
+  COGWORKS_ENCRYPTION_KEY        Encrypted-fields key (default: read from <dataDir>/.encryption-key)
+  COGWORKS_CLUSTER_WORKERS       Worker count for \`cogworks cluster\`
+  COGWORKS_TRUSTED_PROXIES       Comma-separated peer IPs trusted for X-Forwarded-For
+  NODE_ENV / COGWORKS_ENV        Triggers production guardrails on \`wipe\`.
 
-Docs: https://docs.vaultbase.dev
+Docs: https://docs.cogworks.dev
 `;
 
 async function main() {
@@ -269,12 +270,12 @@ async function main() {
     process.argv[2] === "-v" ||
     process.argv[2] === "version"
   ) {
-    const { VAULTBASE_VERSION } = await import("./core/version.ts");
-    process.stdout.write(`vaultbase ${VAULTBASE_VERSION}\n`);
+    const { COGWORKS_VERSION } = await import("./core/version.ts");
+    process.stdout.write(`cogworks ${COGWORKS_VERSION}\n`);
     return;
   }
 
-  // `vaultbase cluster` — spawn N worker processes via the cluster
+  // `cogworks cluster` — spawn N worker processes via the cluster
   // orchestrator. Lazy-import so the cluster module's top-level code (which
   // immediately spawns) only runs when actually requested.
   if (process.argv[2] === "cluster") {
@@ -282,8 +283,8 @@ async function main() {
     return;
   }
 
-  // `vaultbase mcp` — Model Context Protocol server over stdio.
-  // Boots a registry of vaultbase tools, gated by the API token's scopes,
+  // `cogworks mcp` — Model Context Protocol server over stdio.
+  // Boots a registry of cogworks tools, gated by the API token's scopes,
   // and serves JSON-RPC 2.0 to AI agents (Claude Desktop, Cursor, etc.)
   // until stdin closes.
   if (process.argv[2] === "mcp") {
@@ -299,12 +300,12 @@ async function main() {
       );
       process.exit(0);
     } catch (e) {
-      process.stderr.write(`vaultbase mcp: ${e instanceof Error ? e.message : String(e)}\n`);
+      process.stderr.write(`cogworks mcp: ${e instanceof Error ? e.message : String(e)}\n`);
       process.exit(2);
     }
   }
 
-  // `vaultbase doctor` — pre-flight checks for the v0.11 auth-collection
+  // `cogworks doctor` — pre-flight checks for the v0.11 auth-collection
   // migration. Read-only DB inspection; reports blockers + warnings and
   // exits non-zero on blockers so CI / scripts can guard.
   if (process.argv[2] === "doctor") {
@@ -314,7 +315,7 @@ async function main() {
     process.exit(code);
   }
 
-  // `vaultbase wipe` — hard-reset the install. Dry-run by default;
+  // `cogworks wipe` — hard-reset the install. Dry-run by default;
   // refuses on production signals unless `--force`. See scripts/wipe.ts.
   if (process.argv[2] === "wipe") {
     const config = await loadConfig();
@@ -323,7 +324,7 @@ async function main() {
     process.exit(code);
   }
 
-  // `vaultbase token <subcmd>` — local API-token management. Reads + writes
+  // `cogworks token <subcmd>` — local API-token management. Reads + writes
   // the DB directly, bypassing HTTP. Skips server boot.
   if (process.argv[2] === "token") {
     const config = await loadConfig();
@@ -332,12 +333,12 @@ async function main() {
       await runTokenCli(process.argv.slice(3), config.dbPath, config.jwtSecret);
       process.exit(0);
     } catch (e) {
-      process.stderr.write(`vaultbase token: ${e instanceof Error ? e.message : String(e)}\n`);
+      process.stderr.write(`cogworks token: ${e instanceof Error ? e.message : String(e)}\n`);
       process.exit(2);
     }
   }
 
-  // `vaultbase update` — self-update. Pulls the latest signed release for
+  // `cogworks update` — self-update. Pulls the latest signed release for
   // the running platform, verifies SHA-256 + cosign sig, atomically
   // replaces the binary. Skips server boot.
   if (process.argv[2] === "update") {
@@ -346,14 +347,14 @@ async function main() {
       await runUpdate(process.argv.slice(3));
       process.exit(0);
     } catch (e) {
-      process.stderr.write(`vaultbase update: ${e instanceof Error ? e.message : String(e)}\n`);
+      process.stderr.write(`cogworks update: ${e instanceof Error ? e.message : String(e)}\n`);
       process.exit(2);
     }
   }
 
-  // `vaultbase backup --to <dest>` — atomic SQLite snapshot + push.
+  // `cogworks backup --to <dest>` — atomic SQLite snapshot + push.
   // Skips server boot entirely so cron / one-shot ops can run alongside
-  // a live `vaultbase` daemon (VACUUM INTO is concurrent-safe).
+  // a live `cogworks` daemon (VACUUM INTO is concurrent-safe).
   if (process.argv[2] === "backup") {
     const config = await loadConfig();
     const { runBackup } = await import("./scripts/backup.ts");
@@ -361,7 +362,7 @@ async function main() {
       await runBackup(config.dbPath, process.argv.slice(3));
       process.exit(0);
     } catch (e) {
-      process.stderr.write(`vaultbase backup: ${e instanceof Error ? e.message : String(e)}\n`);
+      process.stderr.write(`cogworks backup: ${e instanceof Error ? e.message : String(e)}\n`);
       process.exit(2);
     }
   }
@@ -393,7 +394,7 @@ async function main() {
   // `Bun.serve({ reusePort: true })` so the kernel load-balances incoming
   // connections (SO_REUSEPORT). Single-process mode behaves exactly as
   // before — no flag, no behavior change.
-  const isWorker = !!process.env.VAULTBASE_WORKER_ID;
+  const isWorker = !!process.env.COGWORKS_WORKER_ID;
   Bun.serve({
     port: config.port,
     fetch: honoFetch,
@@ -405,7 +406,7 @@ async function main() {
   // entries reach disk before exit. Two layers — async on signals (loop
   // still runs) + sync on `exit` (defensive, loop is dead).
   const shutdown = async (signal: string): Promise<void> => {
-    process.stderr.write(`\nvaultbase: received ${signal}, draining logs...\n`);
+    process.stderr.write(`\ncogworks: received ${signal}, draining logs...\n`);
     try {
       await drainLogBuffer();
     } catch {
@@ -427,13 +428,13 @@ async function main() {
 
   if (!adminExists) {
     console.log(
-      `\n┌─────────────────────────────────────────────┐\n│  Vaultbase is running at ${base}   │\n│  Set up your admin account:                  │\n│  ${base}/_/setup                  │\n└─────────────────────────────────────────────┘\n`,
+      `\n┌─────────────────────────────────────────────┐\n│  Cogworks is running at ${base}   │\n│  Set up your admin account:                  │\n│  ${base}/_/setup                  │\n└─────────────────────────────────────────────┘\n`,
     );
   } else {
-    const tag = process.env.VAULTBASE_WORKER_ID
-      ? ` [worker ${process.env.VAULTBASE_WORKER_ID} pid ${process.pid}]`
+    const tag = process.env.COGWORKS_WORKER_ID
+      ? ` [worker ${process.env.COGWORKS_WORKER_ID} pid ${process.pid}]`
       : "";
-    console.log(`Vaultbase running at ${base}${tag}`);
+    console.log(`Cogworks running at ${base}${tag}`);
   }
 }
 

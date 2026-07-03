@@ -1,6 +1,6 @@
-# Vaultbase (fork) — Server Roadmap
+# Cogworks (fork) — Server Roadmap
 
-Status audit + prioritized improvement roadmap for the **server** (vaultbase repo), generated from a review of the post-Hono-migration codebase. `sdk` and `mcp` to follow once the server is done.
+Status audit + prioritized improvement roadmap for the **server** (cogworks repo), generated from a review of the post-Hono-migration codebase. `sdk` and `mcp` to follow once the server is done.
 
 Legend — **Confidence**: ✅ verified in code · ⚠️ review-flagged, needs verify before fix. **Effort**: S (<½ day) · M (1–2 days) · L (multi-day). Most items marked *(pre-existing)* were inherited from upstream `vaultbase-sh`, not introduced by the Hono migration — candidates to also contribute upstream.
 
@@ -80,7 +80,7 @@ The enhancement review surfaced several items that are actually **correctness/se
 |---|---------|-----------|--------|
 | F-1 | **Full-text search (SQLite FTS5)** — biggest capability gap; today only `LIKE` via `~`. Opt-in `searchable` field flag → contentless FTS5 table synced on write; `search=` param in `core/filter.ts`. Zero new deps. | `filter.ts:192` | M |
 | F-2 | **OpenAPI spec + embedded docs** (`/api/docs`) — generate from **collection defs** (field types → JSON Schema), not routes. New `api/openapi.ts`. Shares its generator core with F-3. | — | M |
-| F-3 | **Typed client-SDK generator** (`/api/v1/sdk/types.ts` or `vaultbase gen-sdk`) — field defs → TS interfaces + thin typed client. Highest DX leverage; pairs with F-2. | beside `csv.ts` | M |
+| F-3 | **Typed client-SDK generator** (`/api/v1/sdk/types.ts` or `cogworks gen-sdk`) — field defs → TS interfaces + thin typed client. Highest DX leverage; pairs with F-2. | beside `csv.ts` | M |
 | F-4 | **WebAuthn / passkeys** — table stakes for modern auth; TOTP exists but no passkeys. New `webauthn_credentials` table; ceremonies beside TOTP; `@simplewebauthn/server` (1 dep). | `api/auth.ts` | M–L |
 | F-5 | **`sqlite-vec` ANN vector index** (also E-10) — drop-in for the existing swappable `VectorSearchInput` seam; removes 10K ceiling. | `records.ts:135`, `vector.ts` | M |
 | F-6 | **OpenTelemetry/OTLP trace export** — the per-request span tree is *already built* by `RequestTimer`/`timeFor`; just export it from the root `finish()` path, gated by `otel.endpoint`. | `core/perf-metrics.ts`, `server.ts:271` | M |
