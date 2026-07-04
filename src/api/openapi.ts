@@ -11,6 +11,7 @@
 import { Hono } from "hono";
 import { listCollections } from "../core/collections.ts";
 import { buildOpenApiSpec } from "../core/openapi.ts";
+import { buildSdkTypes } from "../core/sdk-types.ts";
 import { getAllSettings } from "./settings.ts";
 import { getAppUrl } from "../core/email.ts";
 import { COGWORKS_VERSION } from "../core/version.ts";
@@ -52,5 +53,16 @@ export function makeOpenApiPlugin() {
     .get("/docs", (c) => {
       if (!docsEnabled()) return c.json({ error: "Docs are disabled", code: 404 }, 404);
       return c.html(DOCS_HTML);
+    })
+    .get("/sdk/types.ts", async (c) => {
+      // Typed client SDK (roadmap F-3), generated from collection defs. Gated by
+      // the same `docs.enabled` setting as the OpenAPI surface.
+      if (!docsEnabled()) return c.json({ error: "Docs are disabled", code: 404 }, 404);
+      const collections = await listCollections();
+      const src = buildSdkTypes(collections, {
+        serverUrl: serverUrl().replace(/\/api\/v1$/, ""),
+        version: COGWORKS_VERSION,
+      });
+      return c.body(src, 200, { "content-type": "application/typescript; charset=utf-8" });
     });
 }

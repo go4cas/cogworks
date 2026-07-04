@@ -23,13 +23,8 @@ import {
 } from "../core/sec.ts";
 import { makeAuthOauth2Plugin } from "./auth-oauth2.ts";
 import { makeAuthWebauthnPlugin } from "./auth-webauthn.ts";
-import {
-  getAppUrl,
-  getTemplate,
-  isSmtpConfigured,
-  renderTemplate,
-  sendEmail,
-} from "../core/email.ts";
+import { getAppUrl, getTemplate, isMailConfigured, renderTemplate } from "../core/email.ts";
+import { enqueueEmail } from "../core/mail-queue.ts";
 import { buildOtpauthUrl, generateSecret, verifyCode as verifyTotpCode } from "../core/totp.ts";
 import { isAuthFeatureEnabled } from "../core/auth-features.ts";
 import { validatePassword } from "../core/password-policy.ts";
@@ -219,7 +214,8 @@ async function issueAndSend(
     appUrl,
     collection: collectionName,
   };
-  await sendEmail({
+  // Durable send (E-8): enqueue so an SMTP blip retries instead of dropping.
+  await enqueueEmail({
     to: user.email,
     subject: renderTemplate(tpl.subject, vars),
     text: renderTemplate(tpl.body, vars),
@@ -256,7 +252,8 @@ async function issueOtpAndSend(
     appUrl,
     collection: collectionName,
   };
-  await sendEmail({
+  // Durable send (E-8): enqueue so an SMTP blip retries instead of dropping.
+  await enqueueEmail({
     to: user.email,
     subject: renderTemplate(tpl.subject, vars),
     text: renderTemplate(tpl.body, vars),
@@ -306,6 +303,7 @@ export function makeAuthPlugin(jwtSecret: string) {
               email: body.email,
               password_hash: hash,
               password_reset_at: now,
+              role: "owner", // F-9: the first admin is always the owner
               created_at: now,
             });
           } catch {
@@ -466,7 +464,7 @@ export function makeAuthPlugin(jwtSecret: string) {
           // taken, queue a "complete account / reset password" email instead so
           // the legitimate owner can recover, and refuse silently.
           if (existing) {
-            if (isSmtpConfigured()) {
+            if (isMailConfigured()) {
               issueAndSend(
                 "reset",
                 { id: existing.id, email: existing.email },
@@ -541,7 +539,7 @@ export function makeAuthPlugin(jwtSecret: string) {
               helpers,
             });
           }
-          if (isSmtpConfigured()) {
+          if (isMailConfigured()) {
             issueAndSend("verify", { id, email }, col.id, col.name).catch((e) => {
               log.error("verification email failed", {
                 scope: "auth",
@@ -815,7 +813,7 @@ export function makeAuthPlugin(jwtSecret: string) {
           return c.json({ error: "User not found", code: 404 }, 404);
         }
         if (u.email_verified) return c.json({ data: { sent: false, alreadyVerified: true } });
-        if (!isSmtpConfigured()) {
+        if (!isMailConfigured()) {
           return c.json({ error: "SMTP not configured", code: 422 }, 422);
         }
         try {
@@ -873,7 +871,7 @@ export function makeAuthPlugin(jwtSecret: string) {
           if (col.type !== "auth") {
             return c.json({ error: `'${col.name}' is not an auth collection`, code: 422 }, 422);
           }
-          if (!isSmtpConfigured()) {
+          if (!isMailConfigured()) {
             return c.json({ error: "SMTP not configured", code: 422 }, 422);
           }
           const u = findUserByEmail(col, body.email);
@@ -958,7 +956,7 @@ export function makeAuthPlugin(jwtSecret: string) {
           if (!isAuthFeatureEnabled("otp")) {
             return c.json({ error: "OTP login is disabled", code: 422 }, 422);
           }
-          if (!isSmtpConfigured()) {
+          if (!isMailConfigured()) {
             return c.json({ error: "SMTP not configured", code: 422 }, 422);
           }
           const u = findUserByEmail(col, body.email);

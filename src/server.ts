@@ -20,6 +20,8 @@ import { makeAdminPlugin } from "./admin/index.ts";
 import { makeAuthPagesPlugin } from "./admin/auth-pages.ts";
 import { makeLogsPlugin, accessLogMiddleware } from "./api/logs.ts";
 import { makeAdminsPlugin } from "./api/admins.ts";
+import { roleGateMiddleware } from "./api/role-gate.ts";
+import { resStatus } from "./api/http-util.ts";
 import { makeBackupPlugin } from "./api/backup.ts";
 import { rateLimitMiddleware } from "./api/ratelimit.ts";
 import { makeIndexesPlugin } from "./api/indexes.ts";
@@ -50,9 +52,11 @@ import { makeWebhooksPlugin } from "./api/webhooks.ts";
 import { makeNotificationsPlugin } from "./api/notifications.ts";
 import { startScheduler } from "./core/jobs.ts";
 import { startQueueScheduler } from "./core/queues.ts";
+import { startWorkflowScheduler } from "./core/workflows.ts";
 import { startUpdateCheckScheduler } from "./core/update-check.ts";
 import { startWebhookDispatcher } from "./core/webhooks.ts";
 import { registerNotificationsWorker } from "./core/notifications.ts";
+import { registerMailWorker } from "./core/mail-queue.ts";
 import { RequestTimer, attachTimer, detachTimer } from "./core/perf-metrics.ts";
 import { exportRequestTrace } from "./core/otel.ts";
 import { log } from "./core/log.ts";
@@ -175,12 +179,14 @@ export function createServer(config: Config) {
   // so the first scheduler tick finds it. Idempotent on re-call (cluster
   // workers each call createServer).
   registerNotificationsWorker();
+  registerMailWorker();
 
   // ── Per-worker background loops (safe / required in every cluster worker) ──
   // The queue scheduler competes for jobs via an atomic claim (claimAndRun), so
   // running it everywhere just adds throughput. The API-token usage flusher
   // drains a PER-WORKER in-memory buffer, so it must run in every worker.
   startQueueScheduler();
+  startWorkflowScheduler();
   startApiTokenUsageFlusher();
   // Cross-worker realtime bus: every worker tails the shared event table so a
   // record written on a sibling worker reaches this worker's WS/SSE subscribers.
@@ -288,12 +294,7 @@ export function createServer(config: Config) {
     await next();
 
     // A WebSocket upgrade (101) response must be returned untouched.
-    let status = 0;
-    try {
-      status = c.res.status;
-    } catch {
-      status = 0;
-    }
+    const status = resStatus(c);
     if (status !== 101) {
       const isApi = new URL(request.url).pathname.startsWith("/api/");
       for (const [k, v] of Object.entries(securityHeaders({ isApi }))) {
@@ -357,6 +358,9 @@ export function createServer(config: Config) {
   // Every route below is native Hono (no Elysia mount remains). Matched in
   // static-over-dynamic priority within this one router — see the records note.
   const migrated = new Hono();
+  // F-9 control-plane RBAC: enforce admin operator-role tiers before any route
+  // handler. No-ops for non-gated paths (records, auth, files, observability).
+  migrated.use("*", roleGateMiddleware(config.jwtSecret));
   migrated.route("/api/v1", makeOpenApiPlugin());
   migrated.route("/api/v1", makeThemePlugin());
   migrated.route("/api/v1", makeMetricsPlugin(config.jwtSecret));

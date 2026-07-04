@@ -8,12 +8,23 @@
  * Key source: env `COGWORKS_ENCRYPTION_KEY` — must be 32 bytes when decoded
  * from base64, hex, or used as a UTF-8 string of exactly 32 chars. Loss of
  * the key = permanent loss of encrypted data.
+ *
+ * Key rotation (F-13): set `COGWORKS_ENCRYPTION_KEY` to the NEW key and put the
+ * previous key(s) in `COGWORKS_ENCRYPTION_KEY_OLD` (comma-separated). New writes
+ * use the primary key; decrypts try the primary first, then each old key —
+ * AES-GCM's auth tag makes a wrong-key attempt fail cleanly, so no key-id in the
+ * wire format is needed. Run `cogworks rotate-key` to re-encrypt every stored
+ * value under the primary key; once backups + record history under the old key
+ * are no longer needed, drop `COGWORKS_ENCRYPTION_KEY_OLD`.
  */
 
 import { createCipheriv, createDecipheriv, randomBytes as nodeRandomBytes } from "node:crypto";
 
 const PREFIX = "vbenc:1:";
 const TAG_BYTES = 16;
+
+/** Storage prefix of an encrypted value — for `LIKE` pre-filters during rotation. */
+export const ENCRYPTED_PREFIX = PREFIX;
 
 let cachedKey: CryptoKey | null = null;
 let cachedRawKey: string | null = null;
@@ -63,6 +74,14 @@ export function isEncryptionAvailable(): boolean {
   return !!process.env.COGWORKS_ENCRYPTION_KEY;
 }
 
+/** Previous key(s) accepted for decryption during a rotation (comma-separated). */
+function oldKeyStrings(): string[] {
+  return (process.env.COGWORKS_ENCRYPTION_KEY_OLD ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 function toBase64(bytes: Uint8Array): string {
   let s = "";
   for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]!);
@@ -95,15 +114,40 @@ export async function decryptValue(stored: string): Promise<string> {
   const rest = stored.slice(PREFIX.length);
   const [ivB64, ctB64] = rest.split(":");
   if (!ivB64 || !ctB64) throw new Error("Malformed encrypted value");
-  const key = await getKey();
   const iv = fromBase64(ivB64);
   const ct = fromBase64(ctB64);
-  const pt = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: iv as unknown as ArrayBuffer },
-    key,
-    ct as unknown as ArrayBuffer,
+  const attempt = async (key: CryptoKey): Promise<string> =>
+    new TextDecoder().decode(
+      await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: iv as unknown as ArrayBuffer },
+        key,
+        ct as unknown as ArrayBuffer,
+      ),
+    );
+  // Primary key first; then any rotation-old keys (GCM tag rejects wrong keys).
+  try {
+    return await attempt(await getKey());
+  } catch {
+    /* fall through to old keys */
+  }
+  for (const raw of oldKeyStrings()) {
+    try {
+      const bytes = decodeKey(raw);
+      const key = await crypto.subtle.importKey(
+        "raw",
+        bytes as unknown as ArrayBuffer,
+        { name: "AES-GCM" },
+        false,
+        ["decrypt"],
+      );
+      return await attempt(key);
+    } catch {
+      /* try next old key */
+    }
+  }
+  throw new Error(
+    "Decryption failed: value matches neither COGWORKS_ENCRYPTION_KEY nor any COGWORKS_ENCRYPTION_KEY_OLD",
   );
-  return new TextDecoder().decode(pt);
 }
 
 /**
@@ -139,14 +183,30 @@ export function decryptValueSync(stored: string): string {
   const rest = stored.slice(PREFIX.length);
   const [ivB64, ctB64] = rest.split(":");
   if (!ivB64 || !ctB64) throw new Error("Malformed encrypted value");
-  const key = getRawKeyBytes();
   const iv = fromBase64(ivB64);
   const ctTag = fromBase64(ctB64);
   if (ctTag.length < TAG_BYTES) throw new Error("Encrypted value too short");
   const ct = ctTag.subarray(0, ctTag.length - TAG_BYTES);
   const tag = ctTag.subarray(ctTag.length - TAG_BYTES);
-  const decipher = createDecipheriv("aes-256-gcm", key, iv);
-  decipher.setAuthTag(tag);
-  const pt = Buffer.concat([decipher.update(ct), decipher.final()]);
-  return pt.toString("utf8");
+  const attempt = (key: Uint8Array): string => {
+    const decipher = createDecipheriv("aes-256-gcm", key, iv);
+    decipher.setAuthTag(tag);
+    return Buffer.concat([decipher.update(ct), decipher.final()]).toString("utf8");
+  };
+  // Primary key first; then any rotation-old keys (GCM tag rejects wrong keys).
+  try {
+    return attempt(getRawKeyBytes());
+  } catch {
+    /* fall through to old keys */
+  }
+  for (const raw of oldKeyStrings()) {
+    try {
+      return attempt(decodeKey(raw));
+    } catch {
+      /* try next old key */
+    }
+  }
+  throw new Error(
+    "Decryption failed: value matches neither COGWORKS_ENCRYPTION_KEY nor any COGWORKS_ENCRYPTION_KEY_OLD",
+  );
 }

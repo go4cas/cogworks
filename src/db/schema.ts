@@ -228,6 +228,12 @@ export const admin = sqliteTable("cogworks_admin", {
    * or admin-driven force-logout.
    */
   password_reset_at: integer("password_reset_at").notNull().default(0),
+  /**
+   * Operator role (F-9 RBAC). One of `owner` | `developer` | `editor` | `viewer`,
+   * ascending capability. Defaults to `owner` so pre-RBAC admins keep full access.
+   * Enforced at the control-plane surface by `core/admin-roles.ts`.
+   */
+  role: text("role").notNull().default("owner"),
   created_at: integer("created_at").notNull().default(sql`(unixepoch())`),
 });
 
@@ -330,6 +336,29 @@ export const jobsLog = sqliteTable("cogworks_jobs_log", {
   enqueued_at: integer("enqueued_at").notNull().default(sql`(unixepoch())`),
   started_at: integer("started_at"),
   finished_at: integer("finished_at"),
+});
+
+/**
+ * Durable workflow runs (F-11). A workflow is a code-first state machine whose
+ * completed steps are memoized here, so a re-run (after a sleep, an event, or a
+ * process restart) skips already-done side-effecting steps and resumes.
+ */
+export const workflowRuns = sqliteTable("cogworks_workflow_runs", {
+  id: text("id").primaryKey(),
+  /** Registered workflow definition name. */
+  name: text("name").notNull(),
+  status: text("status").notNull().default("running"), // running | sleeping | completed | failed
+  /** JSON input passed to the workflow. */
+  input: text("input").notNull().default("null"),
+  /** JSON map: stepName → { v: <result> } (completed) or { sleep: true } (parked). */
+  steps: text("steps").notNull().default("{}"),
+  /** JSON final return value, once completed. */
+  output: text("output"),
+  error: text("error"),
+  /** When a sleeping run becomes runnable again (unix seconds). */
+  wake_at: integer("wake_at"),
+  created_at: integer("created_at").notNull().default(sql`(unixepoch())`),
+  updated_at: integer("updated_at").notNull().default(sql`(unixepoch())`),
 });
 
 export const settings = sqliteTable("cogworks_settings", {
