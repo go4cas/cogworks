@@ -665,6 +665,29 @@ function applySchema(client: Database): void {
     `CREATE INDEX IF NOT EXISTS idx_cogworks_realtime_events_created_at ON cogworks_realtime_events(created_at)`,
   );
 
+  // Ephemeral realtime presence (who's currently on a channel + their state).
+  // One row per (channel, connection). `origin` is the owning worker id (null in
+  // single-process) so a worker can clean up its own rows and a reaper can cull a
+  // crashed worker's leftovers past a TTL. Not a durable table — cleared per worker on boot.
+  client.exec(`
+    CREATE TABLE IF NOT EXISTS cogworks_presence (
+      channel TEXT NOT NULL,
+      conn_id TEXT NOT NULL,
+      key TEXT NOT NULL,
+      state TEXT NOT NULL DEFAULT '{}',
+      identity TEXT,
+      origin TEXT,
+      updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      PRIMARY KEY (channel, conn_id)
+    )
+  `);
+  client.exec(
+    `CREATE INDEX IF NOT EXISTS idx_cogworks_presence_conn ON cogworks_presence(conn_id)`,
+  );
+  client.exec(
+    `CREATE INDEX IF NOT EXISTS idx_cogworks_presence_stale ON cogworks_presence(updated_at)`,
+  );
+
   // ── v0.11: auth users moved to per-collection `cw_<auth-col>` tables ──
   //
   // Old model: every auth user lived in shared `cogworks_users` keyed by

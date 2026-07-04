@@ -62,6 +62,7 @@ import { exportRequestTrace } from "./core/otel.ts";
 import { log } from "./core/log.ts";
 import {
   setWSAuth,
+  getWSAuth,
   subscribe,
   unsubscribe,
   disconnectAll,
@@ -75,11 +76,26 @@ import {
   type RealtimeEvent,
   type BroadcastOpts,
 } from "./realtime/manager.ts";
+import {
+  trackPresence,
+  untrackPresence,
+  dropConnPresence,
+  presenceState,
+  presenceTopic,
+  startPresenceScheduler,
+} from "./realtime/presence.ts";
 import { startRealtimeTail, pruneRealtimeEvents } from "./realtime/cluster-bus.ts";
 import { openSSEStream } from "./realtime/sse.ts";
 
 interface ClientMessage {
-  type: "subscribe" | "unsubscribe" | "auth" | "list-subs";
+  type:
+    | "subscribe"
+    | "unsubscribe"
+    | "auth"
+    | "list-subs"
+    | "presence-track"
+    | "presence-untrack"
+    | "presence-state";
   /** Preferred field name. */
   topics?: string[];
   /** Backwards-compat alias for topics. */
@@ -88,6 +104,12 @@ interface ClientMessage {
   token?: string;
   /** When type === "subscribe": a filter expression applied to these topics (E-2). */
   filter?: string;
+  /** Presence: the channel to track/observe. */
+  channel?: string;
+  /** Presence: client-chosen grouping key (defaults to auth id, else conn id). */
+  key?: string;
+  /** Presence: the client's state payload broadcast to the channel. */
+  state?: unknown;
 }
 
 async function verifyTokenForWS(token: string, jwtSecret: string): Promise<WSAuth | null> {
@@ -190,6 +212,9 @@ export function createServer(config: Config) {
   startQueueScheduler();
   startWorkflowScheduler();
   startApiTokenUsageFlusher();
+  // Realtime presence: clears this worker's stale rows on boot, then heartbeats
+  // its live connections + reaps a crashed worker's leftovers past the TTL.
+  startPresenceScheduler();
   // Cross-worker realtime bus: every worker tails the shared event table so a
   // record written on a sibling worker reaches this worker's WS/SSE subscribers.
   // No-op in single-process mode (self-gated on COGWORKS_WORKER_ID).
@@ -436,6 +461,16 @@ export function createServer(config: Config) {
       return c.json({ data: { ready: false, reason: (e as Error).message } }, 503);
     }
   });
+  // Presence snapshot (read-only) — a full `key → [meta]` map for a channel.
+  // Handy for SSE observers (which can't track over the one-way stream) and for
+  // any client that wants the current roster over plain HTTP.
+  migrated.get("/api/v1/realtime/presence/:channel", (c) => {
+    const origin = c.req.header("origin") ?? null;
+    if (!isOriginAllowed(origin)) {
+      return c.json({ error: "Origin not allowed", code: 403 }, 403);
+    }
+    return c.json({ data: presenceState(c.req.param("channel")) });
+  });
   // SSE fallback for clients that can't open WebSockets. Pairs with
   // `POST /api/v1/realtime` for setting subscriptions.
   migrated.get("/api/v1/realtime", (c) => {
@@ -545,6 +580,43 @@ export function createServer(config: Config) {
             ws.send(JSON.stringify({ type: "subs", topics: listSubsFor(adapter) }));
             return;
           }
+          // ── Presence (Supabase-style ephemeral "who's here") ──
+          if (
+            msg.type === "presence-track" ||
+            msg.type === "presence-untrack" ||
+            msg.type === "presence-state"
+          ) {
+            if (typeof msg.channel !== "string" || !msg.channel) {
+              ws.send(JSON.stringify({ type: "error", code: "invalid_channel" }));
+              return;
+            }
+            const connId = adapter.data.connId;
+            if (msg.type === "presence-untrack") {
+              untrackPresence(connId, msg.channel);
+              return;
+            }
+            // track + state both make this connection an observer of the channel.
+            subscribe(adapter, [presenceTopic(msg.channel)]);
+            if (msg.type === "presence-track") {
+              const auth = getWSAuth(adapter);
+              const identity = auth ? { id: auth.id, type: auth.type } : null;
+              // Grouping key: client's choice, else the (trustworthy) auth id, else conn id.
+              const key = typeof msg.key === "string" && msg.key ? msg.key : (auth?.id ?? connId);
+              const r = trackPresence(connId, msg.channel, key, msg.state ?? {}, identity);
+              if (r === null) {
+                ws.send(JSON.stringify({ type: "error", code: "invalid_presence" }));
+                return;
+              }
+            }
+            ws.send(
+              JSON.stringify({
+                type: "presence-state",
+                channel: msg.channel,
+                state: presenceState(msg.channel),
+              }),
+            );
+            return;
+          }
           const topics = msg.topics ?? msg.collections;
           if (!Array.isArray(topics)) {
             ws.send(
@@ -567,6 +639,7 @@ export function createServer(config: Config) {
         onClose(_evt, ws) {
           const adapter = wsAdapters.get(rawKey(ws));
           if (adapter) {
+            dropConnPresence(adapter.data.connId); // emit `leave` on every channel
             disconnectAll(adapter);
             wsAdapters.delete(rawKey(ws));
           }
