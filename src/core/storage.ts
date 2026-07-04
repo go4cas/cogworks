@@ -92,7 +92,11 @@ interface S3LikeClient {
     data: ArrayBuffer | Uint8Array | Blob | string,
     opts?: { type?: string },
   ): Promise<unknown>;
-  file(key: string): { arrayBuffer(): Promise<ArrayBuffer>; exists(): Promise<boolean> };
+  file(key: string): {
+    arrayBuffer(): Promise<ArrayBuffer>;
+    exists(): Promise<boolean>;
+    stream(): ReadableStream;
+  };
   delete(key: string): Promise<unknown>;
   exists(key: string): Promise<boolean>;
 }
@@ -199,13 +203,16 @@ export async function deleteFile(key: string): Promise<void> {
   }
 }
 
-/** Returns a Response that streams/serves the file. Falls back to fetching bytes for S3. */
+/** Returns a Response that streams the file (E-4/E-5 — never buffers the whole object in RAM). */
 export async function fileResponse(key: string): Promise<Response | null> {
   const cfg = getConfig();
   if (cfg.driver === "s3") {
-    const buf = await readFile(key);
-    if (!buf) return null;
-    return new Response(buf);
+    if (!cfg.s3) throw new Error("S3 driver selected but configuration is missing");
+    const f = s3Client(cfg.s3).file(key);
+    if (!(await f.exists())) return null;
+    // Stream the S3 object through rather than buffering it — Bun's S3 file
+    // yields a lazy ReadableStream, so large downloads stay flat on memory.
+    return new Response(f.stream());
   }
   let path: string;
   try {

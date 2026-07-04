@@ -410,7 +410,10 @@ export function makeFilesPlugin(uploadDir: string, jwtSecret: string) {
         const id = crypto.randomUUID();
         const filename = `${id}.${ext}`;
         const fileMime = file.type || "application/octet-stream";
-        await writeFile(filename, await file.arrayBuffer(), fileMime);
+        // E-5: stream the upload straight to storage — `Bun.write` / the S3 client
+        // consume the Blob directly, so the handler never materializes a second
+        // full-file `ArrayBuffer` copy.
+        await writeFile(filename, file, fileMime);
         await db.insert(files).values({
           id,
           collection_id: col.id,
