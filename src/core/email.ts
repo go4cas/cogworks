@@ -68,20 +68,53 @@ function getTransporter(): { config: SmtpConfig; transporter: Transporter } {
   return { config, transporter };
 }
 
+/**
+ * Transport selector (F-14). `smtp` (default) uses nodemailer; `http` uses an
+ * HTTP provider API (Resend today — SES/Postmark are the same shape, add later).
+ */
+function mailTransport(): "smtp" | "http" {
+  return getAllSettings()["mail.transport"] === "http" ? "http" : "smtp";
+}
+
+/** Configured for *some* transport — used to gate whether to attempt a send. */
+export function isMailConfigured(): boolean {
+  if (mailTransport() === "http") {
+    const s = getAllSettings();
+    return !!(s["mail.http.api_key"] && (s["mail.from"] || s["smtp.from"]));
+  }
+  return isSmtpConfigured();
+}
+
+/** HTTP provider driver — Resend. Fixed host, so no SSRF-guard needed. */
+async function sendViaHttp(opts: RichEmailOptions): Promise<{ messageId: string }> {
+  const s = getAllSettings();
+  const apiKey = s["mail.http.api_key"] ?? "";
+  const from = opts.from ?? s["mail.from"] ?? s["smtp.from"] ?? "";
+  if (!apiKey || !from) throw new EmailNotConfiguredError();
+  const body: Record<string, unknown> = { from, to: opts.to, subject: opts.subject };
+  if (opts.html) body.html = opts.html;
+  if (opts.text) body.text = opts.text;
+  if (opts.cc) body.cc = opts.cc;
+  if (opts.bcc) body.bcc = opts.bcc;
+  if (opts.replyTo) body.reply_to = opts.replyTo;
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`Resend send failed: ${res.status} ${t.slice(0, 200)}`);
+  }
+  const j = (await res.json().catch(() => ({}))) as { id?: string };
+  return { messageId: j.id ?? "" };
+}
+
 export async function sendEmail(opts: EmailOptions): Promise<{ messageId: string }> {
-  const { config, transporter } = getTransporter();
   if (!opts.text && !opts.html) {
     throw new Error("Email must include `text` or `html`");
   }
-  const sendOpts: Parameters<Transporter["sendMail"]>[0] = {
-    from: config.from,
-    to: opts.to,
-    subject: opts.subject,
-  };
-  if (opts.text) sendOpts.text = opts.text;
-  if (opts.html) sendOpts.html = opts.html;
-  const info = await transporter.sendMail(sendOpts);
-  return { messageId: info.messageId };
+  return sendMailRich(opts);
 }
 
 /**
@@ -101,6 +134,7 @@ export interface RichEmailOptions extends EmailOptions {
 }
 
 export async function sendMailRich(opts: RichEmailOptions): Promise<{ messageId: string }> {
+  if (mailTransport() === "http") return sendViaHttp(opts);
   const { config, transporter } = getTransporter();
   const sendOpts: Parameters<Transporter["sendMail"]>[0] = {
     from: opts.from ?? config.from,

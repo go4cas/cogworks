@@ -237,6 +237,10 @@ Subcommands:
   backup                          Take a snapshot of the SQLite DB.
                                   --to <path>
 
+  rotate-key                      Re-encrypt all encrypted values under the
+                                  current COGWORKS_ENCRYPTION_KEY (set the old
+                                  key as COGWORKS_ENCRYPTION_KEY_OLD first).
+
   update                          Print update status against GitHub releases.
 
 Server flags:
@@ -348,6 +352,21 @@ async function main() {
       process.exit(0);
     } catch (e) {
       process.stderr.write(`cogworks update: ${e instanceof Error ? e.message : String(e)}\n`);
+      process.exit(2);
+    }
+  }
+
+  // `cogworks rotate-key` — re-encrypt all encrypted values under the current
+  // COGWORKS_ENCRYPTION_KEY (with COGWORKS_ENCRYPTION_KEY_OLD as decrypt
+  // fallback). Skips server boot.
+  if (process.argv[2] === "rotate-key") {
+    const config = await loadConfig();
+    const { runRotateKeyCli } = await import("./scripts/rotate-key.ts");
+    try {
+      await runRotateKeyCli(process.argv.slice(3), config.dbPath);
+      process.exit(0);
+    } catch (e) {
+      process.stderr.write(`cogworks rotate-key: ${e instanceof Error ? e.message : String(e)}\n`);
       process.exit(2);
     }
   }
