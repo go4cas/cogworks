@@ -295,6 +295,7 @@ function applySchema(client: Database): void {
       email TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
       password_reset_at INTEGER NOT NULL DEFAULT 0,
+      role TEXT NOT NULL DEFAULT 'owner',
       created_at INTEGER NOT NULL DEFAULT (unixepoch())
     )
   `);
@@ -302,6 +303,8 @@ function applySchema(client: Database): void {
     client,
     `ALTER TABLE cogworks_admin ADD COLUMN password_reset_at INTEGER NOT NULL DEFAULT 0`,
   );
+  // F-9 RBAC: existing admins default to `owner` so no one loses access on upgrade.
+  addColumn(client, `ALTER TABLE cogworks_admin ADD COLUMN role TEXT NOT NULL DEFAULT 'owner'`);
   try {
     client.exec(
       `CREATE UNIQUE INDEX IF NOT EXISTS idx_cogworks_admin_email ON cogworks_admin(email)`,
@@ -421,6 +424,25 @@ function applySchema(client: Database): void {
   );
   client.exec(
     `CREATE INDEX IF NOT EXISTS idx_cogworks_jobs_log_unique ON cogworks_jobs_log(unique_key, status)`,
+  );
+
+  // Durable workflow runs (F-11).
+  client.exec(`
+    CREATE TABLE IF NOT EXISTS cogworks_workflow_runs (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'running',
+      input TEXT NOT NULL DEFAULT 'null',
+      steps TEXT NOT NULL DEFAULT '{}',
+      output TEXT,
+      error TEXT,
+      wake_at INTEGER,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+    )
+  `);
+  client.exec(
+    `CREATE INDEX IF NOT EXISTS idx_cogworks_workflow_runs_runnable ON cogworks_workflow_runs(status, wake_at)`,
   );
 
   client.exec(`
