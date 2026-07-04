@@ -347,7 +347,7 @@ export const workflowRuns = sqliteTable("cogworks_workflow_runs", {
   id: text("id").primaryKey(),
   /** Registered workflow definition name. */
   name: text("name").notNull(),
-  status: text("status").notNull().default("running"), // running | sleeping | completed | failed
+  status: text("status").notNull().default("running"), // running | sleeping | waiting | completed | failed
   /** JSON input passed to the workflow. */
   input: text("input").notNull().default("null"),
   /** JSON map: stepName → { v: <result> } (completed) or { sleep: true } (parked). */
@@ -357,6 +357,10 @@ export const workflowRuns = sqliteTable("cogworks_workflow_runs", {
   error: text("error"),
   /** When a sleeping run becomes runnable again (unix seconds). */
   wake_at: integer("wake_at"),
+  /** Event name a `waiting` run is parked on (F-11b), else null. */
+  wait_event: text("wait_event"),
+  /** Optional correlation key that scopes which events wake this run. */
+  wait_key: text("wait_key"),
   created_at: integer("created_at").notNull().default(sql`(unixepoch())`),
   updated_at: integer("updated_at").notNull().default(sql`(unixepoch())`),
 });

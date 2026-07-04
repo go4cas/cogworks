@@ -437,12 +437,19 @@ function applySchema(client: Database): void {
       output TEXT,
       error TEXT,
       wake_at INTEGER,
+      wait_event TEXT,
+      wait_key TEXT,
       created_at INTEGER NOT NULL DEFAULT (unixepoch()),
       updated_at INTEGER NOT NULL DEFAULT (unixepoch())
     )
   `);
+  addColumn(client, `ALTER TABLE cogworks_workflow_runs ADD COLUMN wait_event TEXT`);
+  addColumn(client, `ALTER TABLE cogworks_workflow_runs ADD COLUMN wait_key TEXT`);
   client.exec(
     `CREATE INDEX IF NOT EXISTS idx_cogworks_workflow_runs_runnable ON cogworks_workflow_runs(status, wake_at)`,
+  );
+  client.exec(
+    `CREATE INDEX IF NOT EXISTS idx_cogworks_workflow_runs_waiting ON cogworks_workflow_runs(status, wait_event, wait_key)`,
   );
 
   client.exec(`

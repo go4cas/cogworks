@@ -21,16 +21,36 @@
  * admin-authored workflow definitions (compiled like workers), per-run
  * versioning, and ret/timeout policy.
  */
-import { and, eq, lt, lte, or } from "drizzle-orm";
+import { and, eq, isNull, lt, lte, or } from "drizzle-orm";
 import { getDb } from "../db/client.ts";
 import { workflowRuns } from "../db/schema.ts";
 import { log } from "./log.ts";
+
+export interface WaitForEventOpts {
+  /**
+   * Correlation key. Only `deliverWorkflowEvent(name, …, { key })` calls with a
+   * matching key (or no key, if this is unset) wake the run — so 1,000 orders
+   * each waiting on `order.shipped` resume only for their own shipment.
+   */
+  key?: string;
+  /**
+   * Optional predicate on the delivered payload. Because the workflow re-runs
+   * its own code on resume, this is just JS — no rule engine needed. A `false`
+   * result discards that event and keeps waiting.
+   */
+  match?: (payload: unknown) => boolean;
+}
 
 export interface StepApi {
   /** Run a unit of work once; its result is persisted and reused on resume. */
   run<T>(name: string, fn: () => Promise<T> | T): Promise<T>;
   /** Park the workflow for `seconds`, resuming after the delay. */
   sleep(name: string, seconds: number): Promise<void>;
+  /**
+   * Park until a matching event is delivered via {@link deliverWorkflowEvent},
+   * then resume with its payload (memoized like every other step).
+   */
+  waitForEvent<T = unknown>(name: string, opts?: WaitForEventOpts): Promise<T>;
 }
 
 export type WorkflowFn = (step: StepApi, input: unknown) => Promise<unknown>;
@@ -50,6 +70,14 @@ export function _clearWorkflows(): void {
 /** Thrown by `step.sleep` to unwind the function and park the run. */
 class Park {
   constructor(public readonly wakeAt: number) {}
+}
+
+/** Thrown by `step.waitForEvent` to park the run until a matching event arrives. */
+class WaitEvent {
+  constructor(
+    public readonly event: string,
+    public readonly key: string | null,
+  ) {}
 }
 
 type StepState = Record<string, { v?: unknown; sleep?: boolean }>;
@@ -89,7 +117,10 @@ export async function startWorkflow(name: string, input?: unknown): Promise<Star
  * Execute one advancement of a run: replay the workflow function, memoizing
  * completed steps, until it completes, fails, or parks on a sleep.
  */
-export async function advanceWorkflow(runId: string): Promise<void> {
+export async function advanceWorkflow(
+  runId: string,
+  incoming?: { name: string; payload: unknown },
+): Promise<void> {
   const db = getDb();
   const rows = await db.select().from(workflowRuns).where(eq(workflowRuns.id, runId)).limit(1);
   const run = rows[0];
@@ -103,6 +134,9 @@ export async function advanceWorkflow(runId: string): Promise<void> {
 
   const steps: StepState = safeParse(run.steps, {});
   const input = safeParse<unknown>(run.input, null);
+  // A delivered event is consumed at most once per advance — the first matching
+  // waitForEvent takes it; later ones re-park.
+  let pending = incoming;
 
   const api: StepApi = {
     async run<T>(name: string, f: () => Promise<T> | T): Promise<T> {
@@ -122,6 +156,22 @@ export async function advanceWorkflow(runId: string): Promise<void> {
       steps[name] = { sleep: true };
       throw new Park(nowSec() + Math.max(0, Math.floor(seconds)));
     },
+    async waitForEvent<T = unknown>(name: string, opts?: WaitForEventOpts): Promise<T> {
+      const existing = steps[name];
+      if (existing && "v" in existing) return existing.v as T; // already satisfied
+      // Consume a freshly-delivered event if it matches this wait's name + predicate.
+      if (pending && pending.name === name && (!opts?.match || opts.match(pending.payload))) {
+        const payload = pending.payload;
+        pending = undefined;
+        steps[name] = { v: payload };
+        await db
+          .update(workflowRuns)
+          .set({ steps: JSON.stringify(steps), updated_at: nowSec() })
+          .where(eq(workflowRuns.id, runId));
+        return payload as T;
+      }
+      throw new WaitEvent(name, opts?.key ?? null);
+    },
   };
 
   try {
@@ -133,6 +183,8 @@ export async function advanceWorkflow(runId: string): Promise<void> {
         output: JSON.stringify(output ?? null),
         steps: JSON.stringify(steps),
         wake_at: null,
+        wait_event: null,
+        wait_key: null,
         updated_at: nowSec(),
       })
       .where(eq(workflowRuns.id, runId));
@@ -144,6 +196,22 @@ export async function advanceWorkflow(runId: string): Promise<void> {
           status: "sleeping",
           steps: JSON.stringify(steps),
           wake_at: e.wakeAt,
+          wait_event: null,
+          wait_key: null,
+          updated_at: nowSec(),
+        })
+        .where(eq(workflowRuns.id, runId));
+      return;
+    }
+    if (e instanceof WaitEvent) {
+      await db
+        .update(workflowRuns)
+        .set({
+          status: "waiting",
+          steps: JSON.stringify(steps),
+          wake_at: null,
+          wait_event: e.event,
+          wait_key: e.key,
           updated_at: nowSec(),
         })
         .where(eq(workflowRuns.id, runId));
@@ -156,6 +224,44 @@ export async function advanceWorkflow(runId: string): Promise<void> {
       .where(eq(workflowRuns.id, runId));
     log.error("workflow failed", { scope: "workflows", name: run.name, runId, error: msg });
   }
+}
+
+/**
+ * Deliver a named event to every run parked on `step.waitForEvent(name, …)`.
+ * A run wakes when its `wait_key` is unset, or equals the delivered `key`. The
+ * run's own predicate (`opts.match`) is the final filter, evaluated on resume.
+ * Returns how many runs were advanced. At-least-once: a delivery a run's
+ * predicate rejects is dropped — re-deliver if needed.
+ */
+export async function deliverWorkflowEvent(
+  name: string,
+  payload: unknown,
+  opts?: { key?: string },
+): Promise<number> {
+  const db = getDb();
+  const key = opts?.key ?? null;
+  const keyMatch =
+    key === null
+      ? isNull(workflowRuns.wait_key)
+      : or(isNull(workflowRuns.wait_key), eq(workflowRuns.wait_key, key));
+  const waiting = await db
+    .select({ id: workflowRuns.id })
+    .from(workflowRuns)
+    .where(and(eq(workflowRuns.status, "waiting"), eq(workflowRuns.wait_event, name), keyMatch));
+
+  let delivered = 0;
+  for (const r of waiting) {
+    // Atomically claim so concurrent deliveries/ticks don't double-advance.
+    const claim = await db
+      .update(workflowRuns)
+      .set({ status: "running", updated_at: nowSec() })
+      .where(and(eq(workflowRuns.id, r.id), eq(workflowRuns.status, "waiting")))
+      .returning({ id: workflowRuns.id });
+    if (claim.length === 0) continue;
+    await advanceWorkflow(r.id, { name, payload });
+    delivered++;
+  }
+  return delivered;
 }
 
 /**
