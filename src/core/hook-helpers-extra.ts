@@ -883,6 +883,7 @@ export interface ExtraHookHelpers {
   cron: CronHelpers;
   flags: FlagsHelpers;
   webhooks: WebhooksHelpers;
+  workflows: WorkflowsHelpers;
 }
 
 export interface WebhooksHelpers {
@@ -894,6 +895,27 @@ function makeWebhooks(): WebhooksHelpers {
     async dispatch(event, data) {
       const { dispatchEvent } = await import("./webhooks.ts");
       return dispatchEvent({ event, data });
+    },
+  };
+}
+
+export interface WorkflowsHelpers {
+  /** Start a registered durable workflow. Returns its run id. */
+  start(name: string, input?: unknown): Promise<{ runId: string }>;
+  /** Deliver an event to runs parked on `step.waitForEvent(name, …)`. */
+  emit(event: string, payload?: unknown, opts?: { key?: string }): Promise<{ delivered: number }>;
+}
+
+function makeWorkflows(): WorkflowsHelpers {
+  return {
+    async start(name, input) {
+      const { startWorkflow } = await import("./workflows.ts");
+      return startWorkflow(name, input);
+    },
+    async emit(event, payload, opts) {
+      const { deliverWorkflowEvent } = await import("./workflows.ts");
+      const delivered = await deliverWorkflowEvent(event, payload, opts);
+      return { delivered };
     },
   };
 }
@@ -912,5 +934,6 @@ export function makeExtraHelpers(): ExtraHookHelpers {
     cron: makeCron(),
     flags: makeFlags(),
     webhooks: makeWebhooks(),
+    workflows: makeWorkflows(),
   };
 }
