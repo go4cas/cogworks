@@ -49,6 +49,15 @@ const PANELS = [
   { title: 'Storage', help: 'Where uploaded files live.', test: storageTest, fields: [
     { key: 's3.bucket', label: 'S3 / R2 bucket', placeholder: 'leave empty for local disk' },
   ] },
+  { title: 'Push notifications — FCM', test: { label: 'Test connection', run: async () => { const r = /** @type {any} */ (await api.post('/api/v1/admin/notifications/providers/fcm/test-connection', {})); if (r?.error) throw new Error(r.error) } }, fields: [
+    { key: 'notifications.providers.fcm.enabled', label: 'Enabled', type: 'bool' },
+    { key: 'notifications.providers.fcm.service_account', label: 'Service account JSON', type: 'textarea' },
+  ] },
+  { title: 'Push notifications — OneSignal', test: { label: 'Test connection', run: async () => { const r = /** @type {any} */ (await api.post('/api/v1/admin/notifications/providers/onesignal/test-connection', {})); if (r?.error) throw new Error(r.error) } }, fields: [
+    { key: 'notifications.providers.onesignal.enabled', label: 'Enabled', type: 'bool' },
+    { key: 'notifications.providers.onesignal.app_id', label: 'App ID' },
+    { key: 'notifications.providers.onesignal.api_key', label: 'API key', type: 'password' },
+  ] },
 ]
 
 function SettingsPage() {

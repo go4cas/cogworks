@@ -26,6 +26,7 @@ const NAV = [
       ['/realtime', 'Realtime', 'realtime'],
       ['/observe', 'Logs', 'logs'],
       ['/api-docs', 'API', 'apidocs'],
+      ['/operations', 'Operations', 'operations'],
       ['/operate', 'Settings', 'settings'],
     ],
   },
