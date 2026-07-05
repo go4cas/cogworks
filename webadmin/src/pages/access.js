@@ -1,5 +1,6 @@
 import { html, reactive } from '@arrow-js/core'
 import { useMeta } from '../framework/index.js'
+import { useToast } from '../composables/useToast.js'
 import { api } from '../lib/api.js'
 import { Link } from '../components/Link.js'
 
@@ -13,15 +14,18 @@ const ROLE_COLOR = {
   viewer: 'var(--color-fg-faint)',
 }
 
+const SCOPES = ['read', 'write', 'admin', 'mcp:read', 'mcp:write', 'mcp:admin', 'mcp:sql']
+
 const fmtDate = (/** @type {number} */ ts) => (ts ? new Date(ts * 1000).toISOString().slice(0, 10) : '—')
 const fmtExpiry = (/** @type {number} */ ts) => (ts ? new Date(ts * 1000).toISOString().slice(0, 10) : 'never')
 
 function AccessPage() {
   useMeta({ title: 'Access · Cogworks' })
+  const toast = useToast()
 
   const s = reactive(
-    /** @type {{ admins: any[]|null, tokens: any[]|null, authCols: any[]|null, busy: string }} */
-    ({ admins: null, tokens: null, authCols: null, busy: '' }),
+    /** @type {{ admins: any[]|null, tokens: any[]|null, authCols: any[]|null, busy: string, minting: boolean, mintName: string, mintScopes: string[], mintBusy: boolean, minted: any }} */
+    ({ admins: null, tokens: null, authCols: null, busy: '', minting: false, mintName: '', mintScopes: ['read'], mintBusy: false, minted: null }),
   )
 
   const loadAdmins = () => api.get('/api/v1/admin/admins').then((r) => { s.admins = /** @type {any} */ (r)?.data ?? [] }).catch(() => { s.admins = [] })
@@ -32,15 +36,40 @@ function AccessPage() {
   async function revokeToken(/** @type {string} */ id, /** @type {string} */ name) {
     if (!globalThis.confirm(`Revoke API token "${name}"? Any client using it stops working immediately.`)) return
     s.busy = id
+    try { await api.delete(`/api/v1/admin/api-tokens/${id}`); await loadTokens() } finally { s.busy = '' }
+  }
+
+  const toggleScope = (/** @type {string} */ sc) => {
+    s.mintScopes = s.mintScopes.includes(sc) ? s.mintScopes.filter((x) => x !== sc) : [...s.mintScopes, sc]
+  }
+
+  async function mint() {
+    if (s.mintBusy) return
+    if (!s.mintName.trim()) { toast.error('Name is required'); return }
+    if (!s.mintScopes.length) { toast.error('Pick at least one scope'); return }
+    s.mintBusy = true
     try {
-      await api.delete(`/api/v1/admin/api-tokens/${id}`)
+      const r = /** @type {any} */ (await api.post('/api/v1/admin/api-tokens', { name: s.mintName.trim(), scopes: s.mintScopes }))
+      if (r?.error) throw new Error(r.error)
+      s.minted = r?.data ?? null
+      s.minting = false
+      s.mintName = ''
+      s.mintScopes = ['read']
       await loadTokens()
+      toast.success('Token minted')
+    } catch (/** @type {any} */ e) {
+      toast.error(e?.message || 'Mint failed')
     } finally {
-      s.busy = ''
+      s.mintBusy = false
     }
   }
 
+  async function copyToken() {
+    try { await navigator.clipboard.writeText(s.minted.token); toast.success('Copied') } catch { toast.error('Copy failed') }
+  }
+
   const eyebrow = (/** @type {string} */ t) => html`<div class="font-mono text-[11px] uppercase tracking-wider text-fg-faint">${t}</div>`
+  const inputCls = 'w-full rounded-control border border-line bg-surface-inset px-3 py-2 text-sm text-fg outline-none placeholder:text-fg-faint focus:border-brand'
 
   return html`
     <div class="space-y-8">
@@ -79,8 +108,35 @@ function AccessPage() {
       <section class="overflow-hidden rounded-panel border border-line bg-surface-raised text-sm shadow-panel">
         <div class="flex items-center justify-between border-b border-line px-4 py-3">
           ${eyebrow('API tokens')}
-          <span class="font-mono text-[11px] text-fg-faint">${() => (s.tokens ? `${s.tokens.length}` : '')}</span>
+          <button @click="${() => { s.minting = !s.minting; s.minted = null }}" class="rounded-control bg-brand px-3 py-1.5 font-mono text-[11px] font-semibold text-[#12233f] transition hover:bg-brand-hover">${() => (s.minting ? 'cancel' : '+ new token')}</button>
         </div>
+
+        ${() =>
+          s.minting
+            ? html`
+              <div class="space-y-3 border-b border-line bg-surface-inset px-4 py-4">
+                <input class="${inputCls}" placeholder="Token name (e.g. ci-deploy)" value="${() => s.mintName}" @input="${(/** @type {any} */ e) => { s.mintName = e.target.value }}" />
+                <div class="flex flex-wrap gap-2">
+                  ${SCOPES.map((sc) => html`
+                    <button @click="${() => toggleScope(sc)}" class="${() => `rounded-control border px-2.5 py-1 font-mono text-[11px] transition ${s.mintScopes.includes(sc) ? 'border-brand bg-brand-tint text-brand' : 'border-line text-fg-soft hover:bg-surface-raised'}`}">${sc}</button>`)}
+                </div>
+                <button @click="${mint}" aria-disabled="${() => (s.mintBusy ? 'true' : 'false')}" class="${() => `rounded-control px-3.5 py-2 font-mono text-xs font-semibold text-[#12233f] transition ${s.mintBusy ? 'bg-brand/40' : 'bg-brand hover:bg-brand-hover'}`}">${() => (s.mintBusy ? 'minting…' : 'mint token')}</button>
+              </div>`
+            : ''}
+
+        ${() =>
+          s.minted
+            ? html`
+              <div class="border-b border-line px-4 py-4" style="background:color-mix(in srgb, var(--color-ok) 10%, transparent)">
+                <div class="font-mono text-[11px] uppercase tracking-wider" style="color:var(--color-ok)">Token minted — copy it now, it won't be shown again</div>
+                <div class="mt-2 flex items-center gap-2">
+                  <code class="flex-1 truncate rounded-control border border-line bg-surface-inset px-3 py-2 font-mono text-xs text-fg">${() => s.minted.token}</code>
+                  <button @click="${copyToken}" class="rounded-control border border-line px-3 py-2 font-mono text-[11px] text-fg-soft hover:bg-surface-inset">copy</button>
+                  <button @click="${() => { s.minted = null }}" class="rounded-control border border-line px-3 py-2 font-mono text-[11px] text-fg-faint hover:bg-surface-inset">dismiss</button>
+                </div>
+              </div>`
+            : ''}
+
         <div class="grid grid-cols-[1.4fr_2fr_0.8fr_0.6fr] border-b border-line font-mono text-[11px] uppercase tracking-wider text-fg-faint">
           <div class="px-4 py-2.5 font-medium">Name</div>
           <div class="px-4 py-2.5 font-medium">Scopes</div>
