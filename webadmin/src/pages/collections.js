@@ -1,6 +1,7 @@
 import { html, reactive } from '@arrow-js/core'
 import { useMeta } from '../framework/index.js'
 import { api, parseFields } from '../lib/api.js'
+import { Link } from '../components/Link.js'
 
 export const meta = { layout: 'menu', title: 'Data' }
 
@@ -48,7 +49,7 @@ function CollectionsPage() {
                       html`
                         <tr class="border-b border-line/60 transition-colors hover:bg-surface-inset">
                           <td class="px-4 py-3">
-                            <span class="font-medium text-fg">${c.name}</span>
+                            ${Link({ to: `/collections/${c.id}`, children: c.name, class: 'font-medium text-fg hover:text-brand' })}
                           </td>
                           <td class="px-4 py-3">
                             <span class="inline-flex items-center gap-1.5 rounded-full border border-line px-2 py-0.5 font-mono text-[11px]" style="color:${(KIND[c.type] ?? KIND.base).color}">
