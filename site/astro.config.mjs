@@ -26,8 +26,10 @@ export default defineConfig({
         {
           label: "Start here",
           items: [
+            { label: "Why Cogworks?", slug: "why-cogworks" },
             { label: "Introduction", slug: "introduction" },
             { label: "Getting started", slug: "getting-started" },
+            { label: "Feature workflow", slug: "feature-workflow" },
             { label: "Examples", slug: "examples" },
           ],
         },
