@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Barlow:wght@400;500;600&family=Space+Mono:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+/* Self-hosted brand fonts — no CDN, works offline and under the binary's CSP. */
+@import './fonts/fonts.css';
 @import "tailwindcss";
 
 /* Dark is the only mode for the Cogworks console — cyanotype navy. The

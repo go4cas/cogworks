@@ -1,13 +1,13 @@
 /**
- * Bun macro: scans admin/dist at compile time, gzip-compresses each file,
+ * Bun macro: scans the admin build at compile time, gzip-compresses each file,
  * and returns a base64-encoded map. Result is inlined into the binary.
  *
  * Saves ~70% on text assets (HTML/JS/CSS) vs raw base64.
  *
- * Path resolution: tries `<source-relative>/../../admin/dist` first, then
- * `<cwd>/admin/dist` as a fallback. Either should work — the fallback covers
- * any quirk where Bun macros resolve `import.meta.dir` differently than
- * runtime expects.
+ * Path resolution: prefers the Quiver console at `webadmin/dist`, falling back
+ * to the legacy React admin at `admin/dist`. Each is tried source-relative
+ * (`<source>/../../<dir>`) then cwd-relative — the fallback covers any quirk
+ * where Bun macros resolve `import.meta.dir` differently than runtime expects.
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -15,6 +15,8 @@ import { gzipSync } from "node:zlib";
 
 export function embedAdminFiles(): Record<string, string> {
   const candidates = [
+    join(import.meta.dir, "../../webadmin/dist"),
+    resolve(process.cwd(), "webadmin/dist"),
     join(import.meta.dir, "../../admin/dist"),
     resolve(process.cwd(), "admin/dist"),
   ];

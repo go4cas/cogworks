@@ -10,7 +10,12 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': { target: 'http://localhost:8090', changeOrigin: true },
+      '/api': { target: 'http://localhost:8091', changeOrigin: true },
     },
+  },
+  build: {
+    // Never inline fonts as data: URIs — the binary's CSP (default-src 'self',
+    // no font-src) blocks data: fonts. Emit them as files served from 'self'.
+    assetsInlineLimit: (filePath) => (filePath.endsWith('.woff2') ? false : undefined),
   },
 })
