@@ -57,34 +57,28 @@ function CollectionDetail() {
       ${() =>
         s.col
           ? html`
-            <div class="overflow-hidden rounded-panel border border-line bg-surface-raised shadow-panel">
+            <div class="overflow-hidden rounded-panel border border-line bg-surface-raised text-sm shadow-panel">
               <div class="border-b border-line px-4 py-2.5 font-mono text-[11px] uppercase tracking-wider text-fg-faint">Schema</div>
-              <table class="w-full text-left text-sm">
-                <thead>
-                  <tr class="border-b border-line font-mono text-[11px] uppercase tracking-wider text-fg-faint">
-                    <th class="px-4 py-2.5 font-medium">Field</th>
-                    <th class="px-4 py-2.5 font-medium">Type</th>
-                    <th class="px-4 py-2.5 font-medium">Flags</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${parseFields(s.col.fields).map((/** @type {any} */ f) =>
-                    html`
-                      <tr class="border-b border-line/60">
-                        <td class="px-4 py-2.5 font-medium text-fg">${f.name}</td>
-                        <td class="px-4 py-2.5 font-mono text-xs text-brand">${f.type}</td>
-                        <td class="px-4 py-2.5">
-                          <span class="flex flex-wrap gap-1.5 font-mono text-[10px] text-fg-faint">
-                            ${f.required ? html`<span class="rounded border border-line px-1.5 py-0.5">required</span>` : ''}
-                            ${f.system ? html`<span class="rounded border border-line px-1.5 py-0.5">system</span>` : ''}
-                            ${f.collection ? html`<span class="rounded border border-line px-1.5 py-0.5">→ ${f.collection}</span>` : ''}
-                          </span>
-                        </td>
-                      </tr>
-                    `.key(f.name),
-                  )}
-                </tbody>
-              </table>
+              <div class="grid grid-cols-[1.2fr_0.8fr_1.4fr] border-b border-line font-mono text-[11px] uppercase tracking-wider text-fg-faint">
+                <div class="px-4 py-2.5 font-medium">Field</div>
+                <div class="px-4 py-2.5 font-medium">Type</div>
+                <div class="px-4 py-2.5 font-medium">Flags</div>
+              </div>
+              ${parseFields(s.col.fields).map((/** @type {any} */ f) =>
+                html`
+                  <div class="grid grid-cols-[1.2fr_0.8fr_1.4fr] items-center border-b border-line/60">
+                    <div class="px-4 py-2.5 font-medium text-fg">${f.name}</div>
+                    <div class="px-4 py-2.5 font-mono text-xs text-brand">${f.type}</div>
+                    <div class="px-4 py-2.5">
+                      <span class="flex flex-wrap gap-1.5 font-mono text-[10px] text-fg-faint">
+                        ${f.required ? html`<span class="rounded border border-line px-1.5 py-0.5">required</span>` : ''}
+                        ${f.system ? html`<span class="rounded border border-line px-1.5 py-0.5">system</span>` : ''}
+                        ${f.collection ? html`<span class="rounded border border-line px-1.5 py-0.5">→ ${f.collection}</span>` : ''}
+                      </span>
+                    </div>
+                  </div>
+                `.key(f.name),
+              )}
             </div>
 
             <div class="rounded-panel border border-line bg-surface-raised p-5 shadow-panel">

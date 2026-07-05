@@ -71,20 +71,16 @@ function SqlPage() {
         s.result && s.result.ok !== false && s.result.columns?.length
           ? html`
             <div class="overflow-auto rounded-panel border border-line bg-surface-raised shadow-panel">
-              <table class="w-full text-left font-mono text-xs">
-                <thead>
-                  <tr class="border-b border-line text-fg-faint">
-                    ${s.result.columns.map((/** @type {string} */ col) => html`<th class="whitespace-nowrap px-3 py-2 font-medium">${col}</th>`)}
-                  </tr>
-                </thead>
-                <tbody>
-                  ${s.result.rows.map((/** @type {any[]} */ row, /** @type {number} */ i) =>
-                    html`<tr class="border-b border-line/50">
-                      ${row.map((cell) => html`<td class="whitespace-nowrap px-3 py-1.5 text-fg-soft">${cell === null ? html`<span class="text-fg-faint">null</span>` : String(cell)}</td>`)}
-                    </tr>`.key(i),
-                  )}
-                </tbody>
-              </table>
+              <div class="min-w-max font-mono text-xs">
+                <div class="flex border-b border-line text-fg-faint">
+                  ${s.result.columns.map((/** @type {string} */ col) => html`<div class="min-w-36 flex-1 whitespace-nowrap px-3 py-2 font-medium">${col}</div>`)}
+                </div>
+                ${s.result.rows.map((/** @type {any[]} */ row, /** @type {number} */ i) =>
+                  html`<div class="flex border-b border-line/50">
+                    ${row.map((cell) => html`<div class="min-w-36 flex-1 whitespace-nowrap px-3 py-1.5 text-fg-soft">${cell === null ? html`<span class="text-fg-faint">null</span>` : String(cell)}</div>`)}
+                  </div>`.key(i),
+                )}
+              </div>
             </div>`
           : ''}
     </div>

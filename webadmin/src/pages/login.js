@@ -35,8 +35,11 @@ function LoginPage() {
   return html`
     <div>
       <div class="flex items-center gap-3">
-        ${GearMark({ size: 34 })}
-        <div class="font-display text-2xl font-semibold text-brand">Cogworks</div>
+        ${GearMark({ size: 40 })}
+        <div class="flex flex-col leading-tight">
+          <span class="font-display text-2xl font-semibold text-brand">Cogworks</span>
+          <span class="mt-0.5 font-mono text-xs text-fg-faint">the works, without the work</span>
+        </div>
       </div>
 
       <div class="mt-6">

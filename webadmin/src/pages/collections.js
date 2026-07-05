@@ -29,41 +29,34 @@ function CollectionsPage() {
         <button class="rounded-control bg-brand px-3.5 py-2 text-sm font-semibold text-[#12233f] shadow-panel hover:bg-brand-hover">New collection</button>
       </div>
 
-      <div class="overflow-hidden rounded-panel border border-line bg-surface-raised shadow-panel">
-        <table class="w-full text-left text-sm">
-          <thead>
-            <tr class="border-b border-line font-mono text-[11px] uppercase tracking-wider text-fg-faint">
-              <th class="px-4 py-3 font-medium">Name</th>
-              <th class="px-4 py-3 font-medium">Kind</th>
-              <th class="px-4 py-3 font-medium">Fields</th>
-              <th class="px-4 py-3 font-medium">Updated</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${() =>
-              s.list === null
-                ? html`<tr><td colspan="4" class="px-4 py-6 text-center text-sm text-fg-faint">Loading…</td></tr>`
-                : s.list.length === 0
-                  ? html`<tr><td colspan="4" class="px-4 py-6 text-center text-sm text-fg-faint">No collections yet.</td></tr>`
-                  : s.list.map((c) =>
-                      html`
-                        <tr class="border-b border-line/60 transition-colors hover:bg-surface-inset">
-                          <td class="px-4 py-3">
-                            ${Link({ to: `/collections/${c.id}`, children: c.name, class: 'font-medium text-fg hover:text-brand' })}
-                          </td>
-                          <td class="px-4 py-3">
-                            <span class="inline-flex items-center gap-1.5 rounded-full border border-line px-2 py-0.5 font-mono text-[11px]" style="color:${(KIND[c.type] ?? KIND.base).color}">
-                              <span class="h-1.5 w-1.5 rounded-full" style="background:${(KIND[c.type] ?? KIND.base).color}"></span>
-                              ${(KIND[c.type] ?? KIND.base).label}
-                            </span>
-                          </td>
-                          <td class="px-4 py-3 font-mono text-xs text-fg-soft">${parseFields(c.fields).length}</td>
-                          <td class="px-4 py-3 font-mono text-xs text-fg-faint">${new Date((c.updated_at ?? 0) * 1000).toISOString().slice(0, 10)}</td>
-                        </tr>
-                      `.key(c.id),
-                    )}
-          </tbody>
-        </table>
+      <div class="overflow-hidden rounded-panel border border-line bg-surface-raised text-sm shadow-panel">
+        <div class="grid grid-cols-[1.6fr_0.8fr_0.6fr_1fr] border-b border-line font-mono text-[11px] uppercase tracking-wider text-fg-faint">
+          <div class="px-4 py-3 font-medium">Name</div>
+          <div class="px-4 py-3 font-medium">Kind</div>
+          <div class="px-4 py-3 font-medium">Fields</div>
+          <div class="px-4 py-3 font-medium">Updated</div>
+        </div>
+        ${() => {
+          if (s.list === null) return html`<div class="px-4 py-6 text-center text-sm text-fg-faint">Loading…</div>`
+          if (s.list.length === 0) return html`<div class="px-4 py-6 text-center text-sm text-fg-faint">No collections yet.</div>`
+          return html`<div>
+            ${s.list.map((c) => {
+              const k = KIND[c.type] ?? KIND.base
+              return html`
+                <div class="grid grid-cols-[1.6fr_0.8fr_0.6fr_1fr] items-center border-b border-line/60 transition-colors hover:bg-surface-inset">
+                  <div class="px-4 py-3">${Link({ to: `/collections/${c.id}`, children: c.name, class: 'font-medium text-fg hover:text-brand' })}</div>
+                  <div class="px-4 py-3">
+                    <span class="inline-flex items-center gap-1.5 rounded-full border border-line px-2 py-0.5 font-mono text-[11px]" style="${`color:${k.color}`}">
+                      <span class="h-1.5 w-1.5 rounded-full" style="${`background:${k.color}`}"></span>${k.label}
+                    </span>
+                  </div>
+                  <div class="px-4 py-3 font-mono text-xs text-fg-soft">${parseFields(c.fields).length}</div>
+                  <div class="px-4 py-3 font-mono text-xs text-fg-faint">${new Date((c.updated_at ?? 0) * 1000).toISOString().slice(0, 10)}</div>
+                </div>
+              `.key(c.id)
+            })}
+          </div>`
+        }}
       </div>
     </div>
   `

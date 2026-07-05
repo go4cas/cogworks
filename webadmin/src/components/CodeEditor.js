@@ -1,4 +1,4 @@
-import { html, onCleanup, nextTick } from '@arrow-js/core'
+import { component, html, onCleanup, nextTick } from '@arrow-js/core'
 // SQL-only Monaco: the editor core + the SQL grammar, nothing else. Importing
 // the umbrella `monaco-editor` drags in ~90 language chunks (13M dist) — dead
 // weight in a single-binary embed. Add more `*.contribution` imports if a
@@ -67,12 +67,11 @@ function ensureSqlCompletion(getTables) {
 }
 
 let _uid = 0
-/**
- * Monaco editor mounted the framework-neutral way (core `monaco.editor.create`
- * into a DOM ref, disposed on cleanup) — no React wrapper.
- * @param {{ value?: string, language?: string, height?: number, onChange?: (v: string) => void, tables?: () => string[] }} props
- */
-export function CodeEditor({ value = '', language = 'sql', height = 320, onChange, tables }) {
+// Monaco editor mounted the framework-neutral way (core `monaco.editor.create`
+// into a DOM ref, disposed on cleanup) — no React wrapper.
+export const CodeEditor = component(
+  /** @param {{ value?: string, language?: string, height?: number, onChange?: (v: string) => void, tables?: () => string[] }} props */
+  ({ value = '', language = 'sql', height = 320, onChange, tables }) => {
   const id = `cw-ed-${++_uid}`
   /** @type {import('monaco-editor').editor.IStandaloneCodeEditor | null} */
   let editor = null
@@ -102,4 +101,4 @@ export function CodeEditor({ value = '', language = 'sql', height = 320, onChang
   })
 
   return html`<div id="${id}" style="${`height:${height}px`}" class="overflow-hidden rounded-control border border-line"></div>`
-}
+})
