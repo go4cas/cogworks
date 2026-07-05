@@ -13,7 +13,9 @@ Boot-time configuration comes from `COGWORKS_*` environment variables. Everythin
 | Variable | Purpose | Default |
 | --- | --- | --- |
 | `COGWORKS_DATA_DIR` | Data directory (db, uploads, logs, secrets) | `./cogworks_data` |
-| `COGWORKS_PORT` | HTTP listen port | 8091 |
+| `COGWORKS_PORT` | HTTP listen port | 8090 |
+| `COGWORKS_PUBLIC_DIR` | Serve a static site from this folder (see [Deployment](/cogworks/docs/deployment/#deploy-static)); empty = off | — |
+| `COGWORKS_PUBLIC_SPA` | With `COGWORKS_PUBLIC_DIR`: serve `index.html` for unmatched routes (SPA) | `0` |
 | `COGWORKS_JWT_SECRET` | Token signing key (auto-generated to `.secret` if unset) | generated |
 | `COGWORKS_ENCRYPTION_KEY` | AES key for encrypted fields + secret settings (base64 / 64-hex / 32-char) | — |
 | `COGWORKS_ENCRYPTION_KEY_OLD` | Previous key(s), comma-separated — accepted for decryption during a [key rotation](#feat-encryption) | — |

@@ -258,8 +258,8 @@
         lg("12:04:02", "info", K.C, "db pool ready (8 conns)"),
         lg("12:04:03", "warn", K.GOLD, "slow query 214ms  posts.search"),
         lg("12:04:04", "info", K.C, "cache warmed  1,204 keys"),
-        lg("12:04:05", "error", K.R, "upstream timeout  ai.embed 1/3"),
-        lg("12:04:06", "info", K.C, "ai.embed recovered  312ms")
+        lg("12:04:05", "error", K.R, "upstream timeout  webhook.send 1/3"),
+        lg("12:04:06", "info", K.C, "webhook delivered  312ms")
       ] },
       { mode: "cogworks · queue workers", cursor: -1, lines: [
         [{ t: "# queue: default", c: K.M }],

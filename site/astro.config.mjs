@@ -30,6 +30,7 @@ export default defineConfig({
             { label: "Introduction", slug: "introduction" },
             { label: "Getting started", slug: "getting-started" },
             { label: "Feature workflow", slug: "feature-workflow" },
+            { label: "AI & agents", slug: "ai-agents" },
             { label: "Examples", slug: "examples" },
           ],
         },

@@ -59,6 +59,41 @@ nginx equivalents: `proxy_read_timeout 86400s` on the WebSocket location and
 `proxy_buffering off` on the SSE location. Sample nginx and Caddy configs ship in
 `deploy/`.
 
+## Serving a static site {#deploy-static}
+
+Point `COGWORKS_PUBLIC_DIR` at a folder and Cogworks serves it as a static site —
+handy for a marketing page, docs, or a compiled SPA sharing the same origin as
+your API (no CORS, one deploy). It's **opt-in**: with no `COGWORKS_PUBLIC_DIR`,
+nothing is served and `/` stays a 404.
+
+```bash
+COGWORKS_PUBLIC_DIR=/var/www/site cogworks
+```
+
+Static files are the **lowest-priority** handler — a request only falls through
+to a file after it fails to match every API, admin (`/_/`), auth, realtime, and
+[custom route](/cogworks/docs/extensibility/), and those reserved prefixes keep
+their JSON 404s. Resolution for `/foo`:
+
+1. exact file — `public/foo`
+2. extensionless → `.html` — `public/foo.html`
+3. directory index — `public/foo/index.html`
+
+`/` and trailing-slash paths serve the directory `index.html`. Paths are
+resolved inside the root — traversal (`../`) is rejected. HTML is sent
+`Cache-Control: no-cache`; other assets get a short `max-age`.
+
+For a client-routed **SPA**, set `COGWORKS_PUBLIC_SPA=1` so any unmatched
+extensionless path serves the root `index.html` (letting the router take over);
+asset requests (with an extension) still 404 when missing.
+
+:::note[When you just need one page]
+For a single dynamic HTML response — an OG-image endpoint, an embed, a webhook
+landing page — a [custom route](/cogworks/docs/extensibility/) that sets
+`ctx.set.headers['content-type'] = 'text/html'` and returns a string is simpler
+than a whole static dir.
+:::
+
 ## Building the binary
 
 Build a self-contained executable (bundles the admin UI):
