@@ -27,19 +27,23 @@
       auth: '<rect x="5" y="11" width="14" height="9" rx="1.5"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path>',
       storage: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"></path>',
       files: '<path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V8Z"></path><polyline points="14 3 14 8 19 8"></polyline>',
-      functions: '<polygon points="13 2 4 14 11 14 9 22 20 10 13 10"></polygon>'
+      functions: '<polygon points="13 2 4 14 11 14 9 22 20 10 13 10"></polygon>',
+      security: '<path d="M12 3l7 3v5c0 4.4-3 7.6-7 8.6-4-1-7-4.2-7-8.6V6l7-3Z"></path><path d="M9 12l2 2 4-4"></path>',
+      observability: '<path d="M4 18a8 8 0 0 1 16 0"></path><line x1="12" y1="18" x2="15.5" y2="12.5"></line><circle cx="12" cy="18" r="1.2"></circle>'
     };
     _gears = [
-      { key: "database", icon: ic.database, title: "database", head: "Collections + real SQL", badge: "15 field types · 3 kinds", desc: "Every collection is a real SQLite table you can query, index, and migrate — not a bag of JSON. Typed fields with validation, relations, and ALTER-style schema diffs when you edit.", specs: ["text · number · json", "relation · file · vector", "optimistic concurrency (ETag)", "browser schema editor"] },
-      { key: "apis", icon: ic.apis, title: "apis", head: "Auto-generated REST", badge: "typed · filter / sort / expand", desc: "Every collection ships a REST endpoint the moment you define it. Filter, sort, paginate, expand relations, and project fields — fully typed end-to-end from a generated SDK.", specs: ["filter · sort · paginate", "expand relations", "field projection", "generated typed SDK"] },
-      { key: "realtime", icon: ic.realtime, title: "realtime", head: "Realtime streams", badge: "WebSocket + SSE", desc: "Subscribe to a record, its children, or a wildcard for everything. Per-connection auth respects your API rules, and SSE falls back automatically where sockets cannot reach.", specs: ["subscribe to a record", "subscribe to children", "wildcard topics", "presence + auth-gated"] },
-      { key: "queues", icon: ic.queues, title: "queues", head: "Queues & cron", badge: "native workers · scheduled", desc: "Background jobs and scheduled tasks run inside the same binary — no Redis, no external worker host. Retries, backoff, and dead-letter handling are built in.", specs: ["native queue workers", "UTC cron + one-off", "retries + backoff", "no external broker"] },
-      { key: "search", icon: ic.search, title: "search", head: "Full-text + vector", badge: "BM25 · nearVector", desc: "Full-text ranking and vector similarity over the same tables your data already lives in. Add a vector field, embed on write, and query by nearest neighbour.", specs: ["full-text (BM25)", "vector field type", "nearVector queries", "hybrid ranking"] },
-      { key: "ai", icon: ic.ai, title: "ai", head: "AI agents via MCP", badge: "first-party MCP server", desc: "Cogworks speaks the Model Context Protocol out of the box. Any agent — Claude, Cursor, ChatGPT — can browse collections, query records, and run admin tasks, scope-gated and audited.", specs: ["tools per collection", "scope-gated tokens", "every call audited", "stdio + HTTP transports"] },
-      { key: "auth", icon: ic.auth, title: "auth", head: "Auth, fully featured", badge: "OAuth2 · MFA · passkeys", desc: "Email + password, OAuth2, OTP and magic-link, MFA/TOTP, passkeys, and anonymous sessions — with JWTs, recovery codes, and no account-enumeration leaks.", specs: ["OAuth2 + OIDC (PKCE)", "OTP · magic-link · MFA", "WebAuthn passkeys", "operator roles (RBAC)"] },
-      { key: "storage", icon: ic.storage, title: "storage", head: "Object storage", badge: "local · S3 · R2", desc: "Local filesystem by default, one-click S3/R2 presets when you grow. On-the-fly thumbnails, MIME + size validation, and rule-based, audited downloads.", specs: ["?thumb=300x200", "per-field view rules", "one-time + IP-bound tokens", "audited downloads"] },
-      { key: "files", icon: ic.files, title: "files", head: "File pipeline", badge: "upload · serve · transform", desc: "A typed file field that handles uploads, protected serving, and image transforms. Signed URLs, per-field rules, and transforms applied on the fly at request time.", specs: ["typed file fields", "signed download URLs", "on-the-fly transforms", "MIME + size validation"] },
-      { key: "functions", icon: ic.functions, title: "functions", head: "Logic in the browser", badge: "hooks · routes · webhooks", desc: "Six hook points around every CRUD event, custom HTTP routes, and outbound HMAC-signed webhooks — all written in JavaScript in the admin UI. Save, and the next request runs the new code.", specs: ["before/after × CRUD hooks", "custom HTTP routes", "HMAC-signed webhooks", "edit live, no redeploy"] }
+      { key: "database", icon: ic.database, title: "database", head: "Collections + real SQL", badge: "15 field types · 3 kinds", doc: "docs/data-model/", desc: "Every collection is a real SQLite table you can query, index, and migrate — not a bag of JSON. Typed fields with validation, relations, ALTER-style schema diffs when you edit, and a browser SQL runner.", specs: ["text · number · json", "relation · file · vector", "optimistic concurrency (ETag)", "schema editor + SQL runner"] },
+      { key: "apis", icon: ic.apis, title: "apis", head: "Auto-generated REST", badge: "typed · filter / sort / expand", doc: "docs/rest-api/", desc: "Every collection ships a REST endpoint the moment you define it. Filter, sort, paginate, expand relations, and project fields — fully typed end-to-end from a generated SDK.", specs: ["filter · sort · paginate", "expand relations", "field projection", "generated typed SDK"] },
+      { key: "realtime", icon: ic.realtime, title: "realtime", head: "Realtime streams", badge: "WebSocket + SSE", doc: "docs/realtime/", desc: "Subscribe to a record, a whole collection, or a wildcard for everything. Per-connection auth respects your API rules, SSE falls back where sockets can't reach, and reconnects replay what you missed.", specs: ["subscribe to records", "wildcard + filtered topics", "reconnect resume", "presence + auth-gated"] },
+      { key: "queues", icon: ic.queues, title: "queues", head: "Queues, cron & workflows", badge: "workers · scheduled · durable", doc: "docs/extensibility/", desc: "Background jobs, scheduled tasks, and code-first durable workflows run inside the same binary — no Redis, no external worker host. Push notifications ride the same durable queue.", specs: ["native queue workers", "UTC cron + one-off", "retries · backoff · dead-letter", "durable step workflows"] },
+      { key: "search", icon: ic.search, title: "search", head: "Full-text + vector", badge: "BM25 · nearVector", doc: "docs/rest-api/", desc: "Full-text ranking and vector similarity over the same tables your data already lives in. Add a vector field, embed on write, and query by nearest neighbour.", specs: ["full-text (BM25)", "vector field type", "nearVector queries", "swappable vector backend"] },
+      { key: "ai", icon: ic.ai, title: "ai", head: "AI agents via MCP", badge: "first-party MCP server", doc: "docs/platform/", desc: "Cogworks speaks the Model Context Protocol out of the box. Any agent — Claude, Cursor, ChatGPT — can browse collections, query records, and run admin tasks, scope-gated and rate-limited.", specs: ["5 tools per collection", "scope-gated tokens", "read-only mode", "stdio + HTTP transports"] },
+      { key: "auth", icon: ic.auth, title: "auth", head: "Auth, fully featured", badge: "OAuth2 · MFA · passkeys", doc: "docs/authentication/", desc: "Email + password, OAuth2, OTP and magic-link, MFA/TOTP, passkeys, and anonymous sessions — with JWTs, recovery codes, and no account-enumeration leaks.", specs: ["11 OAuth2 providers (PKCE)", "OTP · magic-link · MFA", "WebAuthn passkeys", "anonymous + impersonation"] },
+      { key: "storage", icon: ic.storage, title: "storage", head: "Object storage", badge: "local · S3 · R2", doc: "docs/files/", desc: "Local filesystem by default, one-click S3/R2 presets when you grow. On-the-fly thumbnails, MIME + size validation, and rule-based, audited downloads.", specs: ["on-the-fly thumbnails", "per-field view rules", "one-time + IP-bound tokens", "audited downloads"] },
+      { key: "files", icon: ic.files, title: "files", head: "File pipeline", badge: "upload · serve · transform", doc: "docs/files/", desc: "A typed file field that handles uploads, protected serving, and image transforms. Signed URLs, per-field rules, and transforms applied on the fly at request time.", specs: ["typed file fields", "signed download URLs", "on-the-fly transforms", "MIME + size validation"] },
+      { key: "functions", icon: ic.functions, title: "functions", head: "Logic in the browser", badge: "hooks · routes · webhooks", doc: "docs/extensibility/", desc: "Six hook points around every CRUD event, custom HTTP routes, outbound HMAC-signed webhooks, and feature flags — all written in JavaScript in the admin UI. Save, and the next request runs the new code.", specs: ["before/after × CRUD hooks", "custom HTTP routes", "HMAC-signed webhooks", "feature flags + segments"] },
+      { key: "security", icon: ic.security, title: "security", head: "Security & control", badge: "encryption · RBAC · audit", doc: "docs/platform/", desc: "Field-level AES-GCM encryption, operator roles (owner / developer / editor / viewer), an append-only audit log, per-IP and per-token rate limits, and one-command encryption-key rotation.", specs: ["encrypted fields (AES-GCM)", "operator roles (RBAC)", "append-only audit log", "encryption key rotation"] },
+      { key: "observability", icon: ic.observability, title: "observability", head: "Ops & observability", badge: "metrics · tracing · health", doc: "docs/observability/", desc: "Prometheus metrics, OpenTelemetry trace export, liveness + readiness probes, a generated OpenAPI spec, consistent snapshot backups, and multi-core cluster mode — all built in.", specs: ["Prometheus metrics", "OpenTelemetry tracing", "health + readiness probes", "OpenAPI + cluster mode"] }
     ];
     return _gears;
   }
@@ -194,6 +198,15 @@
     });
     right.appendChild(header); right.appendChild(desc); right.appendChild(rule); right.appendChild(sp);
 
+    if (g.doc) {
+      var docLink = document.createElement("a");
+      docLink.className = "gear-doc-link";
+      docLink.href = g.doc;
+      docLink.textContent = "Read the " + g.title + " docs →";
+      docLink.style.cssText = "margin-top:4px;font-family:'Space Mono',monospace;font-size:11.5px;letter-spacing:.3px;color:var(--pc);text-decoration:none";
+      right.appendChild(docLink);
+    }
+
     inner.appendChild(left); inner.appendChild(right);
     gearDetailEl.appendChild(inner);
   }
@@ -211,7 +224,7 @@
     var prompt = function (cmd) { return [{ t: "$ ", c: K.A }, { t: "cogworks", c: K.C }, { t: " " + cmd, c: K.T }]; };
     var req = function (m, mc, path, st, ms) {
       var sc = st < 300 ? K.G : (st < 400 ? K.GOLD : K.R);
-      return [{ t: pad(m, 7), c: mc }, { t: pad(path, 22), c: K.T }, { t: pad(st, 5), c: sc }, { t: rpad(ms, 6), c: K.M }];
+      return [{ t: pad(m, 7), c: mc }, { t: pad(path, 27), c: K.T }, { t: pad(st, 5), c: sc }, { t: rpad(ms, 6), c: K.M }];
     };
     var lg = function (ts, lvl, lc, msg) { return [{ t: ts + "  ", c: K.M }, { t: pad(lvl, 7), c: lc }, { t: msg, c: K.T }]; };
     var job = function (id, name, mark, mc, res) {
@@ -221,7 +234,7 @@
     };
     _views = [
       { mode: "cogworks · bootstrap", cursor: 7, lines: [
-        prompt("start"),
+        prompt(""),
         [{ t: "starting server...", c: K.M }],
         [{ t: "✓ ", c: K.G }, { t: "database ready", c: K.T }],
         [{ t: "✓ ", c: K.G }, { t: "api running on :8090", c: K.T }],
@@ -231,16 +244,16 @@
         [{ t: "cogworks is running", c: K.A }]
       ] },
       { mode: "cogworks · api requests", cursor: -1, lines: [
-        prompt("logs --api"),
-        req("GET", K.C, "/api/posts", 200, "12ms"),
-        req("POST", K.A, "/api/auth/login", 200, "44ms"),
-        req("GET", K.C, "/api/posts/482", 200, "8ms"),
-        req("PATCH", K.GOLD, "/api/posts/482", 200, "19ms"),
-        req("DELETE", K.R, "/api/comments/91", 204, "6ms"),
-        req("GET", K.C, "/api/search?q=gears", 200, "27ms")
+        [{ t: "# access log", c: K.M }],
+        req("GET", K.C, "/api/v1/posts", 200, "12ms"),
+        req("POST", K.A, "/api/v1/auth/users/login", 200, "44ms"),
+        req("GET", K.C, "/api/v1/posts/482", 200, "8ms"),
+        req("PATCH", K.GOLD, "/api/v1/posts/482", 200, "19ms"),
+        req("DELETE", K.R, "/api/v1/comments/91", 204, "6ms"),
+        req("GET", K.C, "/api/v1/posts?search=gears", 200, "27ms")
       ] },
       { mode: "cogworks · log stream", cursor: -1, lines: [
-        prompt("logs --tail"),
+        [{ t: "# server log", c: K.M }],
         lg("12:04:01", "info", K.C, "http listening on :8090"),
         lg("12:04:02", "info", K.C, "db pool ready (8 conns)"),
         lg("12:04:03", "warn", K.GOLD, "slow query 214ms  posts.search"),
@@ -249,7 +262,7 @@
         lg("12:04:06", "info", K.C, "ai.embed recovered  312ms")
       ] },
       { mode: "cogworks · queue workers", cursor: -1, lines: [
-        prompt("queue --watch"),
+        [{ t: "# queue: default", c: K.M }],
         job("1284", "email.send", "✓ done   ", K.G, "82ms"),
         job("1285", "image.resize", "⟳ running", K.C, ""),
         job("1286", "webhook.deliver", "✓ done  ", K.G, "140ms"),
@@ -258,7 +271,7 @@
         [{ t: "5 workers · 0 stalled · 128 done/min", c: K.M }]
       ] },
       { mode: "cogworks · realtime events", cursor: -1, lines: [
-        prompt("realtime --inspect"),
+        [{ t: "# realtime", c: K.M }],
         [{ t: "▲ ", c: K.C }, { t: pad("subscribe", 11), c: K.T }, { t: pad("posts", 14), c: K.C }, { t: "client a1f", c: K.M }],
         [{ t: "● ", c: K.A }, { t: pad("broadcast", 11), c: K.T }, { t: pad("post.created", 14), c: K.T }, { t: "→ 3 clients", c: K.M }],
         [{ t: "● ", c: K.A }, { t: pad("broadcast", 11), c: K.T }, { t: pad("post.updated", 14), c: K.T }, { t: "→ 3 clients", c: K.M }],
@@ -554,7 +567,7 @@
       bp.appendChild(btxt(198, 83.5, "ver 1.0.0", 5, "end"));
       bp.appendChild(el("line", { x1: 107, y1: 87.5, x2: 205, y2: 87.5, stroke: C.gear, "stroke-width": 0.6 }));
       bp.appendChild(btxt(114, 95.5, "single binary", 5));
-      bp.appendChild(btxt(198, 95.5, "gears 10", 5, "end"));
+      bp.appendChild(btxt(198, 95.5, "gears 12", 5, "end"));
       [[109.5, 60], [202.5, 60], [109.5, 94], [202.5, 94]].forEach(function (rv) {
         bp.appendChild(el("circle", { cx: rv[0], cy: rv[1], r: 1.3, fill: C.gear, stroke: "none" }));
         bp.appendChild(el("circle", { cx: rv[0], cy: rv[1], r: 2, fill: "none", stroke: C.gear, "stroke-width": 0.4 }));

@@ -49,7 +49,7 @@ export async function loadConfig(): Promise<Config> {
   const jwtSecret = process.env.COGWORKS_JWT_SECRET ?? (await loadJwtSecret(dataDir));
 
   return {
-    port: parseInt(process.env.COGWORKS_PORT ?? "8091", 10),
+    port: parseInt(process.env.COGWORKS_PORT ?? "8090", 10),
     dataDir,
     dbPath: join(dataDir, "data.db"),
     uploadDir,

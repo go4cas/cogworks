@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cogworks — the works, without the work.</title>
 <meta name="description" content="A self-hosted, single-binary backend-as-a-service. Database, REST APIs, realtime, queues, search, auth, storage, and AI (MCP) in one binary. Open source, MIT.">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-26 -20 64 40'%3E%3Cg transform='translate(-6 1)' fill='none' stroke='%23B6D14A' stroke-width='1.8' stroke-linejoin='round'%3E%3Cpath d='M8.6.2 12.9 1.1 12.6 2.9 8.2 2.5 6.8 5.2 9.8 8.5 8.5 9.8 5.2 6.8 2.5 8.2 2.9 12.6 1.1 12.9.2 8.6-2.8 8.1-5.1 11.9-6.7 11.1-4.9 7-7 4.9-11.1 6.7-11.9 5.1-8.1 2.8-8.6-.2-12.9-1.1-12.6-2.9-8.2-2.5-6.8-5.2-9.8-8.5-8.5-9.8-5.2-6.8-2.5-8.2-2.9-12.6-1.1-12.9-.2-8.6 2.8-8.1 5.1-11.9 6.7-11.1 4.9-7 7-4.9 11.1-6.7 11.9-5.1 8.1-2.8Z'/%3E%3Ccircle r='4'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="mask-icon" href="favicon.svg" color="#B6D14A">
+<link rel="apple-touch-icon" href="favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Barlow:wght@400;500;600&family=Space+Mono:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=Archivo:wght@500;600&display=swap" rel="stylesheet">
 <style>
   *{box-sizing:border-box}
@@ -28,6 +30,8 @@
   .flink:hover{color:var(--pc)}
   .flink-lite{transition:color .15s}
   .flink-lite:hover{color:#E8EFF9}
+  .gear-doc-link{transition:opacity .15s}
+  .gear-doc-link:hover{text-decoration:underline;opacity:.85}
 
   @container (max-width:920px){
     .cog-hero{grid-template-columns:minmax(0,1fr) !important}
@@ -142,8 +146,8 @@
           <div><span style="color:#6FBE8D">&#10003;</span> cosign verify OK <span style="color:#9FB4D4">&middot;</span> sigstore</div>
           <div><span style="color:#6FBE8D">&#10003;</span> installed <span style="color:#9FB4D4">&rarr;</span> <span style="color:#A9C0E2">/usr/local/bin/cogworks</span></div>
           <div style="height:9px"></div>
-          <div><span style="color:var(--pc)">$</span> cogworks start</div>
-          <div style="color:#9FB4D4"># <span style="color:#9FB4D4">&rarr;</span> <span style="color:#A9C0E2">http://localhost:8090/_/</span>  setup wizard</div>
+          <div><span style="color:var(--pc)">$</span> cogworks</div>
+          <div style="color:#9FB4D4"># <span style="color:#9FB4D4">&rarr;</span> <span style="color:#A9C0E2">http://localhost:8090/_/setup</span>  setup wizard</div>
         </div>
       </div>
 
@@ -153,14 +157,15 @@
           <span style="flex:none;width:10px;height:10px;border-radius:50%;background:#F5C87A"></span>
           <span style="flex:none;width:10px;height:10px;border-radius:50%;background:#6FBE8D"></span>
           <span style="margin-left:8px;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.5px;color:#9FB4D4">build from source</span>
-          <span style="margin-left:auto;font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:.5px;color:#5E769B">make</span>
+          <span style="margin-left:auto;font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:.5px;color:#5E769B">bun</span>
         </div>
         <div style="padding:18px 20px;font-family:'Space Mono',monospace;font-size:12.5px;line-height:1.95;color:#E8EFF9">
           <div><span style="color:var(--pc)">$</span> git clone <span style="color:#A9C0E2">github.com/go4cas/cogworks</span></div>
-          <div><span style="color:var(--pc)">$</span> cd cogworks &amp;&amp; make build <span style="color:#9FB4D4">&rarr;</span> <span style="color:#A9C0E2">./cogworks</span></div>
-          <div><span style="color:var(--pc)">$</span> ./cogworks start</div>
+          <div><span style="color:var(--pc)">$</span> cd cogworks &amp;&amp; bun install</div>
+          <div><span style="color:var(--pc)">$</span> bun run build <span style="color:#9FB4D4">&rarr;</span> <span style="color:#A9C0E2">./cogworks</span></div>
+          <div><span style="color:var(--pc)">$</span> ./cogworks</div>
           <div style="height:9px"></div>
-          <div><span style="color:#6FBE8D">&#10003;</span> one binary <span style="color:#9FB4D4">&middot;</span> 38 MB <span style="color:#9FB4D4">&middot;</span> zero deps</div>
+          <div><span style="color:#6FBE8D">&#10003;</span> one binary <span style="color:#9FB4D4">&middot;</span> zero deps <span style="color:#9FB4D4">&middot;</span> macos / linux / windows</div>
           <div style="color:#9FB4D4"># first run launches the setup wizard</div>
         </div>
       </div>
