@@ -24,8 +24,13 @@ const RULES = /** @type {const} */ ([
 
 const FIELD_TYPES = ['text', 'number', 'bool', 'email', 'url', 'date', 'json']
 
-const cell = (/** @type {any} */ v) => {
-  if (v === null || v === undefined || v === '') return '—'
+const cell = (/** @type {any} */ v, /** @type {string} */ type) => {
+  if (v === null || v === undefined || v === '') return html`<span class="text-fg-faint">—</span>`
+  if (type === 'bool') return v ? html`<span style="color:var(--color-ok)">✓</span>` : html`<span class="text-fg-faint">✗</span>`
+  if (type === 'date' || type === 'autodate') {
+    const d = new Date(typeof v === 'number' ? v * 1000 : v)
+    return Number.isNaN(d.getTime()) ? String(v) : d.toISOString().slice(0, 16).replace('T', ' ')
+  }
   if (typeof v === 'object') return JSON.stringify(v)
   return String(v)
 }
@@ -79,24 +84,35 @@ function CollectionDetail() {
     } finally { s.saving = false }
   }
 
-  async function addField() {
-    if (!newFieldName.trim()) { toast.error('Field name required'); return }
-    const fields = parseFields(s.col.fields)
-      .filter((/** @type {any} */ f) => !f.system && !f.implicit)
-      .map((/** @type {any} */ f) => ({ name: f.name, type: f.type, ...(f.required ? { required: true } : {}) }))
-    fields.push({ name: newFieldName.trim(), type: newFieldType })
+  const userFields = () => parseFields(s.col.fields)
+    .filter((/** @type {any} */ f) => !f.system && !f.implicit)
+    .map((/** @type {any} */ f) => ({ name: f.name, type: f.type, ...(f.required ? { required: true } : {}) }))
+
+  async function patchFields(/** @type {any[]} */ fields, /** @type {string} */ okMsg) {
     s.saving = true
     try {
       const r = /** @type {any} */ (await api.patch(`/api/v1/collections/${s.col.id}`, { fields }))
       if (r?.error) throw new Error(r.error)
       if (r?.data) s.col = r.data
-      newFieldName = ''
-      s.addingField = false
-      toast.success('Field added')
+      toast.success(okMsg)
       loadRecords()
     } catch (/** @type {any} */ e) {
-      toast.error(e?.message || 'Add field failed')
+      toast.error(e?.message || 'Schema change failed')
     } finally { s.saving = false }
+  }
+
+  async function addField() {
+    if (!newFieldName.trim()) { toast.error('Field name required'); return }
+    const fields = userFields()
+    fields.push({ name: newFieldName.trim(), type: newFieldType })
+    newFieldName = ''
+    s.addingField = false
+    await patchFields(fields, 'Field added')
+  }
+
+  async function removeSchemaField(/** @type {string} */ fname) {
+    if (!globalThis.confirm(`Remove field "${fname}"? This drops the column and its data from cw_${s.col.name}.`)) return
+    await patchFields(userFields().filter((f) => f.name !== fname), 'Field removed')
   }
 
   /** Editable = user fields (not system/implicit). */
@@ -242,19 +258,19 @@ function CollectionDetail() {
               ${() => {
                 if (s.records === null) return html`<div class="px-4 py-6 text-center text-fg-faint">Loading…</div>`
                 if (!s.records.length) return html`<div class="px-4 py-6 text-center text-fg-faint">No records yet.</div>`
-                const cols = editableFields().map((/** @type {any} */ f) => f.name)
+                const cols = editableFields()
                 return html`
                   <div class="overflow-x-auto">
                     <div class="min-w-max">
                       <div class="flex border-b border-line font-mono text-[11px] uppercase tracking-wider text-fg-faint">
                         <div class="min-w-32 flex-1 px-4 py-2 font-medium">id</div>
-                        ${cols.map((c) => html`<div class="min-w-36 flex-1 px-4 py-2 font-medium">${c}</div>`.key(c))}
+                        ${cols.map((/** @type {any} */ c) => html`<div class="min-w-36 flex-1 px-4 py-2 font-medium">${c.name}</div>`.key(c.name))}
                         <div class="w-24 px-4 py-2"></div>
                       </div>
                       ${s.records.map((rec) => html`
                         <div class="flex items-center border-b border-line/60 text-xs">
                           <div class="min-w-32 flex-1 truncate px-4 py-2 font-mono text-fg-faint">${String(rec.id).slice(0, 8)}</div>
-                          ${cols.map((c) => html`<div class="min-w-36 flex-1 truncate px-4 py-2 text-fg-soft">${cell(rec[c])}</div>`.key(c))}
+                          ${cols.map((/** @type {any} */ c) => html`<div class="min-w-36 flex-1 truncate px-4 py-2 text-fg-soft">${cell(rec[c.name], c.type)}</div>`.key(c.name))}
                           <div class="flex w-24 shrink-0 gap-1 px-4 py-2">
                             ${s.col.type !== 'view' ? html`<button @click="${() => openForm(rec)}" class="font-mono text-[11px] text-fg-faint hover:text-brand">edit</button>` : ''}
                             ${s.col.type !== 'view' ? html`<button @click="${() => deleteRecord(rec.id)}" class="font-mono text-[11px] text-fg-faint hover:text-bad">del</button>` : ''}
@@ -284,14 +300,15 @@ function CollectionDetail() {
                   ? html`<button @click="${() => { s.addingField = !s.addingField }}" class="font-mono text-[11px] text-brand hover:underline">${() => (s.addingField ? 'cancel' : '+ add field')}</button>`
                   : ''}
               </div>
-              <div class="grid grid-cols-[1.2fr_0.8fr_1.4fr] border-b border-line font-mono text-[11px] uppercase tracking-wider text-fg-faint">
+              <div class="grid grid-cols-[1.2fr_0.8fr_1.2fr_0.3fr] border-b border-line font-mono text-[11px] uppercase tracking-wider text-fg-faint">
                 <div class="px-4 py-2.5 font-medium">Field</div>
                 <div class="px-4 py-2.5 font-medium">Type</div>
                 <div class="px-4 py-2.5 font-medium">Flags</div>
+                <div class="px-4 py-2.5"></div>
               </div>
               ${parseFields(s.col.fields).map((/** @type {any} */ f) =>
                 html`
-                  <div class="grid grid-cols-[1.2fr_0.8fr_1.4fr] items-center border-b border-line/60">
+                  <div class="grid grid-cols-[1.2fr_0.8fr_1.2fr_0.3fr] items-center border-b border-line/60">
                     <div class="px-4 py-2.5 font-medium text-fg">${f.name}</div>
                     <div class="px-4 py-2.5 font-mono text-xs text-brand">${f.type}</div>
                     <div class="px-4 py-2.5">
@@ -300,6 +317,11 @@ function CollectionDetail() {
                         ${f.system ? html`<span class="rounded border border-line px-1.5 py-0.5">system</span>` : ''}
                         ${f.collection ? html`<span class="rounded border border-line px-1.5 py-0.5">→ ${f.collection}</span>` : ''}
                       </span>
+                    </div>
+                    <div class="px-4 py-2.5 text-right">
+                      ${!f.system && !f.implicit && s.col.type !== 'view'
+                        ? html`<button @click="${() => removeSchemaField(f.name)}" class="font-mono text-[11px] text-fg-faint hover:text-bad">✕</button>`
+                        : ''}
                     </div>
                   </div>
                 `.key(f.name),

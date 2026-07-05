@@ -9,13 +9,14 @@ function Overview() {
   useMeta({ title: 'Overview · Cogworks' })
 
   const s = reactive(
-    /** @type {{ collections: any[] | null, ready: boolean | null, queue: any }} */
-    ({ collections: null, ready: null, queue: null }),
+    /** @type {{ collections: any[] | null, ready: boolean | null, queue: any, rt: any }} */
+    ({ collections: null, ready: null, queue: null, rt: null }),
   )
 
   api.get('/api/v1/collections').then((r) => { s.collections = /** @type {any} */ (r)?.data ?? [] }).catch(() => { s.collections = [] })
   fetch('/_/ready').then((r) => { s.ready = r.ok }).catch(() => { s.ready = false })
   api.get('/api/v1/admin/queues/stats').then((r) => { s.queue = /** @type {any} */ (r)?.data ?? null }).catch(() => {})
+  api.get('/api/v1/admin/realtime/state').then((r) => { s.rt = /** @type {any} */ (r)?.data ?? null }).catch(() => {})
 
   const authCount = () => (s.collections ?? []).filter((c) => c.type === 'auth').length
   const queueDepth = () => {
@@ -36,7 +37,7 @@ function Overview() {
       <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         ${StatCard({ label: 'Collections', value: () => (s.collections === null ? '…' : s.collections.length), note: () => `${authCount()} auth` })}
         ${StatCard({ label: 'Queue depth', value: queueDepth, note: () => 'jobs waiting' })}
-        ${StatCard({ label: 'Realtime', value: () => '0', note: () => 'live connections' })}
+        ${StatCard({ label: 'Realtime', value: () => (s.rt === null ? '…' : s.rt.connections), note: () => 'live connections' })}
         ${StatCard({
           label: 'Server',
           value: () => (s.ready === null ? '…' : s.ready ? 'ready' : 'down'),
@@ -54,9 +55,9 @@ function Overview() {
           ${['database', 'api', 'realtime', 'queues', 'search', 'mcp'].map(
             (g) => html`
               <div class="flex items-center gap-2.5 rounded-control border border-line bg-surface-inset px-3 py-2.5">
-                <span class="h-1.5 w-1.5 rounded-full" style="background:var(--color-ok)"></span>
+                <span class="h-1.5 w-1.5 rounded-full" style="${() => `background:${s.ready === false ? 'var(--color-bad)' : 'var(--color-ok)'}`}"></span>
                 <span class="font-mono text-xs text-fg-soft">${g}</span>
-                <span class="ml-auto font-mono text-[10px] text-fg-faint">online</span>
+                <span class="ml-auto font-mono text-[10px] text-fg-faint">${() => (s.ready === false ? 'down' : 'online')}</span>
               </div>
             `,
           )}
