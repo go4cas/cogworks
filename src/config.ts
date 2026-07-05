@@ -9,6 +9,10 @@ export interface Config {
   logsDir: string;
   jwtSecret: string;
   encryptionKey: string | undefined;
+  /** Opt-in static-site root (COGWORKS_PUBLIC_DIR). Empty = disabled. */
+  publicDir: string;
+  /** Serve index.html for unmatched extensionless paths (SPA routing). */
+  publicSpa: boolean;
 }
 
 /**
@@ -56,5 +60,7 @@ export async function loadConfig(): Promise<Config> {
     logsDir,
     jwtSecret,
     encryptionKey: process.env.COGWORKS_ENCRYPTION_KEY,
+    publicDir: process.env.COGWORKS_PUBLIC_DIR ?? "",
+    publicSpa: /^(1|true)$/i.test(process.env.COGWORKS_PUBLIC_SPA ?? ""),
   };
 }

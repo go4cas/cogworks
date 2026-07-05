@@ -38,6 +38,8 @@ beforeEach(async () => {
     logsDir: tmpDir,
     jwtSecret: "test-secret-server-err",
     encryptionKey: undefined,
+    publicDir: "",
+    publicSpa: false,
   };
   fetch = createServer(config).fetch;
 });

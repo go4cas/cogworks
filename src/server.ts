@@ -11,6 +11,7 @@ import { getAllSettings } from "./api/settings.ts";
 import { setLogsDir } from "./core/file-logger.ts";
 import { applyCorsHeaders, handleCorsPreflight } from "./core/cors.ts";
 import { setUploadDir } from "./core/storage.ts";
+import { setPublicDir, servePublicFile } from "./core/static-files.ts";
 import { setSandboxDir, pruneStaleSandboxes } from "./core/sql-sandbox.ts";
 import { makeAuthPlugin } from "./api/auth.ts";
 import { makeCollectionsPlugin } from "./api/collections.ts";
@@ -198,6 +199,7 @@ function recordApiTokenTelemetry(request: Request): void {
 export function createServer(config: Config) {
   setLogsDir(config.logsDir);
   setUploadDir(config.uploadDir);
+  setPublicDir(config.publicDir, config.publicSpa);
   setSandboxDir(`${config.dataDir}/sandboxes`);
   // Built-in `_notify` queue worker — must register BEFORE startQueueScheduler
   // so the first scheduler tick finds it. Idempotent on re-call (cluster
@@ -380,6 +382,26 @@ export function createServer(config: Config) {
       err: error,
     });
     return c.json({ error: "Internal Server Error", code: 500 }, 500);
+  });
+
+  // Static-site fallback (opt-in COGWORKS_PUBLIC_DIR): a GET/HEAD that matched
+  // no route is served from the public dir. Reserved prefixes keep their JSON
+  // 404s — we never hijack an unmatched API/admin/auth/realtime path.
+  app.notFound((c) => {
+    const method = c.req.method;
+    if (method === "GET" || method === "HEAD") {
+      const path = new URL(c.req.url).pathname;
+      const reserved =
+        path.startsWith("/api") ||
+        path.startsWith("/_/") ||
+        path.startsWith("/auth/") ||
+        path === "/realtime";
+      if (!reserved) {
+        const res = servePublicFile(path);
+        if (res) return res;
+      }
+    }
+    return c.json({ error: "Not found", code: 404 }, 404);
   });
 
   // Every route below is native Hono (no Elysia mount remains). Matched in
