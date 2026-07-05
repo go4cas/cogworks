@@ -50,6 +50,7 @@ function LogsPage() {
 
       ${() => s.tab === 'requests' ? html`
         <div class="card overflow-hidden">
+          <div class="tscroll">
           <div class="grid thead" style="grid-template-columns:0.6fr 2.4fr 0.5fr 0.5fr 0.6fr">
             <div class="tcell py-2!">Method</div><div class="tcell py-2!">Path</div><div class="tcell py-2!">Status</div><div class="tcell py-2!">ms</div><div class="tcell py-2!">Time</div>
           </div>
@@ -65,8 +66,10 @@ function LogsPage() {
                 <div class="tcell tcell-mono text-fg-faint">${time(l.created_at ?? l.ts)}</div>
               </div>`.key(l.id))}</div>`
           }}
+          </div>
         </div>` : html`
         <div class="card overflow-hidden">
+          <div class="tscroll">
           <div class="grid thead" style="grid-template-columns:1.2fr 1.4fr 1.4fr 0.6fr">
             <div class="tcell py-2!">Action</div><div class="tcell py-2!">Actor</div><div class="tcell py-2!">Target</div><div class="tcell py-2!">Time</div>
           </div>
@@ -81,6 +84,7 @@ function LogsPage() {
                 <div class="tcell tcell-mono text-fg-faint">${time(a.at ?? a.created_at)}</div>
               </div>`.key(a.id))}</div>`
           }}
+          </div>
         </div>`}
     </div>
   `

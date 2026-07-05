@@ -45,11 +45,12 @@ function navLink(/** @type {[string,string,string]} */ item) {
     <a
       href="${to}"
       @click="${(/** @type {Event} */ e) => { e.preventDefault(); go(to) }}"
-      class="${() => `group flex items-center gap-2.5 rounded-control px-2.5 py-2 text-sm transition-colors ${
-        isActive(to) ? 'bg-brand-tint font-semibold text-brand' : 'text-fg-soft hover:bg-surface-hover hover:text-fg'
+      class="${() => `group relative flex items-center gap-2.5 rounded-control py-2 pl-3.5 pr-2.5 text-sm transition-colors ${
+        isActive(to) ? 'bg-brand-tint font-semibold text-brand' : 'font-medium text-fg-soft hover:bg-surface-hover hover:text-fg'
       }`}"
     >
-      <span class="${() => (isActive(to) ? 'text-brand' : 'text-fg-faint group-hover:text-fg-soft')}">${Icon({ name: icon, size: 17 })}</span>
+      <span class="${() => `absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full transition-colors ${isActive(to) ? 'bg-brand' : 'bg-transparent'}`}"></span>
+      <span class="${() => (isActive(to) ? 'text-brand' : 'text-fg-faint group-hover:text-fg')}">${Icon({ name: icon, size: 17 })}</span>
       <span>${label}</span>
     </a>`
 }
@@ -68,7 +69,7 @@ export function MenuLayout(content) {
           ${NAV.map(
             (section) => html`
               <div class="space-y-0.5">
-                ${section.group ? html`<div class="px-2.5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-fg-faint/80">${section.group}</div>` : ''}
+                ${section.group ? html`<div class="px-3.5 pb-1.5 pt-2 text-[10px] font-bold uppercase tracking-[0.14em] text-fg-faint">${section.group}</div>` : ''}
                 ${section.items.map((item) => navLink(/** @type {any} */ (item)))}
               </div>`,
           )}

@@ -17,11 +17,11 @@ function CollectionsPage() {
   const toast = useToast()
 
   const s = reactive(
-    /** @type {{ list: any[]|null, creating: boolean, rows: {id:number}[], busy: boolean }} */
-    ({ list: null, creating: false, rows: [], busy: false }),
+    /** @type {{ list: any[]|null, creating: boolean, ctype: string, rows: {id:number}[], busy: boolean }} */
+    ({ list: null, creating: false, ctype: 'base', rows: [], busy: false }),
   )
   let name = ''
-  let type = 'base'
+  let viewQuery = ''
   /** @type {Record<number,{name:string,type:string}>} */ let fieldVals = {}
   let rowSeq = 0
 
@@ -29,7 +29,7 @@ function CollectionsPage() {
   load()
 
   function openCreate() {
-    name = ''; type = 'base'; fieldVals = {}; rowSeq = 0
+    name = ''; s.ctype = 'base'; viewQuery = 'SELECT id, created, updated FROM cw_posts'; fieldVals = {}; rowSeq = 0
     const first = rowSeq++; fieldVals[first] = { name: '', type: 'text' }
     s.rows = [{ id: first }]; s.creating = true
   }
@@ -39,10 +39,12 @@ function CollectionsPage() {
   async function create() {
     if (s.busy) return
     if (!name.trim()) { toast.error('Collection name is required'); return }
-    const fields = s.rows.map((r) => fieldVals[r.id]).filter((f) => f && f.name.trim()).map((f) => ({ name: f.name.trim(), type: f.type }))
+    /** @type {any} */ const body = { name: name.trim(), type: s.ctype }
+    if (s.ctype === 'view') body.view_query = viewQuery.trim()
+    else body.fields = s.rows.map((r) => fieldVals[r.id]).filter((f) => f && f.name.trim()).map((f) => ({ name: f.name.trim(), type: f.type }))
     s.busy = true
     try {
-      const r = /** @type {any} */ (await api.post('/api/v1/collections', { name: name.trim(), type, fields }))
+      const r = /** @type {any} */ (await api.post('/api/v1/collections', body))
       if (r?.error) throw new Error(r.error)
       toast.success('Collection created'); s.creating = false; await load()
       if (r?.data?.id) router.go(`/collections/${r.data.id}`)
@@ -88,20 +90,22 @@ function CollectionsPage() {
     return html`
       <div class="card card-pad space-y-4">
         <div class="card-title">New collection</div>
-        <div class="grid gap-3 sm:grid-cols-[1fr_10rem]">
+        <div class="grid gap-3 sm:grid-cols-[1fr_12rem]">
           <label class="space-y-1"><span class="field-label">Name</span><input class="${inputCls}" placeholder="e.g. articles" @input="${(/** @type {any} */ e) => { name = e.target.value }}" /></label>
-          <label class="space-y-1"><span class="field-label">Type</span><select class="select" @change="${(/** @type {any} */ e) => { type = e.target.value }}"><option value="base">base</option><option value="auth">auth</option></select></label>
+          <label class="space-y-1"><span class="field-label">Type</span><select class="select" @change="${(/** @type {any} */ e) => { s.ctype = e.target.value }}"><option value="base">base — records</option><option value="auth">auth — users</option><option value="view">view — SQL query</option></select></label>
         </div>
-        <div class="space-y-2">
-          <span class="field-label">Fields</span>
-          ${() => s.rows.map((row) => html`
-            <div class="flex items-center gap-2">
-              <input class="input flex-1" placeholder="field name" value="${fieldVals[row.id]?.name ?? ''}" @input="${(/** @type {any} */ e) => { fieldVals[row.id].name = e.target.value }}" />
-              <select class="select" style="width:9rem" @change="${(/** @type {any} */ e) => { fieldVals[row.id].type = e.target.value }}">${FIELD_TYPES.map((t) => html`<option value="${t}">${t}</option>`.key(t))}</select>
-              <button class="btn btn-ghost btn-icon" @click="${() => removeField(row.id)}">${Icon({ name: 'x', size: 15 })}</button>
-            </div>`.key(row.id))}
-          <button class="btn btn-secondary btn-sm" @click="${addField}">${Icon({ name: 'plus', size: 14 })} Add field</button>
-        </div>
+        ${() => s.ctype === 'view'
+          ? html`<label class="space-y-1"><span class="field-label">View query (read-only SQL)</span><textarea class="textarea mono" style="min-height:6rem;font-size:0.8rem" @input="${(/** @type {any} */ e) => { viewQuery = e.target.value }}">SELECT id, created, updated FROM cw_posts</textarea></label>`
+          : html`<div class="space-y-2">
+              <span class="field-label">Fields</span>
+              ${() => s.rows.map((row) => html`
+                <div class="flex items-center gap-2">
+                  <input class="input flex-1" placeholder="field name" value="${fieldVals[row.id]?.name ?? ''}" @input="${(/** @type {any} */ e) => { fieldVals[row.id].name = e.target.value }}" />
+                  <select class="select" style="width:9rem" @change="${(/** @type {any} */ e) => { fieldVals[row.id].type = e.target.value }}">${FIELD_TYPES.map((t) => html`<option value="${t}">${t}</option>`.key(t))}</select>
+                  <button class="btn btn-ghost btn-icon" @click="${() => removeField(row.id)}">${Icon({ name: 'x', size: 15 })}</button>
+                </div>`.key(row.id))}
+              <button class="btn btn-secondary btn-sm" @click="${addField}">${Icon({ name: 'plus', size: 14 })} Add field</button>
+            </div>`}
         <button class="btn btn-primary" aria-disabled="${() => (s.busy ? 'true' : 'false')}" @click="${create}">${() => (s.busy ? 'Creating…' : 'Create collection')}</button>
       </div>`
   }
