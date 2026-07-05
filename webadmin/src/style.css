@@ -1,0 +1,70 @@
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Barlow:wght@400;500;600&family=Space+Mono:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+/* Dark is the only mode for the Cogworks console — cyanotype navy. The
+   attribute is still honoured so components using `dark:` variants behave. */
+@variant dark (&:where([data-mode=dark], [data-mode=dark] *));
+
+/* ── Cogworks brand tokens — cyanotype navy + lime blueprint ───────────── */
+@theme {
+  --color-brand:       #b6d14a;
+  --color-brand-hover: #c7de6b;
+  --color-brand-tint:  rgb(182 209 74 / 0.13);
+
+  --color-surface:         #0f1f3a; /* page */
+  --color-surface-raised:  #17335c; /* panels / cards / nav */
+  --color-surface-inset:   #0f2547; /* insets / code wells */
+
+  --color-fg:       #e8eff9;
+  --color-fg-soft:  #c4d3ea;
+  --color-fg-faint: #9fb4d4;
+
+  --color-line:        #2a4a7d;
+  --color-line-strong: #3e5c8c;
+
+  /* semantic status */
+  --color-ok:   #6fbe8d;
+  --color-warn: #f5c87a;
+  --color-bad:  #e8927c;
+
+  --radius-control: 0.5rem;
+  --radius-panel:   0.625rem;
+
+  --shadow-panel: 0 1px 3px 0 rgb(0 0 0 / 0.35);
+  --shadow-float: 0 12px 24px -8px rgb(0 0 0 / 0.55);
+
+  --font-display: 'Chakra Petch', ui-sans-serif, system-ui, sans-serif;
+  --font-ui:      'Barlow', ui-sans-serif, system-ui, sans-serif;
+  --font-mono:    'Space Mono', ui-monospace, SFMono-Regular, monospace;
+
+  --animate-toast-in:  toast-in  0.2s ease-out;
+  --animate-toast-out: toast-out 0.2s ease-in forwards;
+}
+
+@keyframes toast-in  { from { opacity: 0; transform: translateY(0.5rem); } to { opacity: 1; transform: translateY(0); } }
+@keyframes toast-out { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(0.5rem); } }
+
+/* ── Base — blueprint grid ground ─────────────────────────────────────── */
+html, body { height: 100%; }
+body {
+  margin: 0;
+  color: var(--color-fg);
+  font-family: var(--font-ui);
+  background-color: var(--color-surface);
+  background-image:
+    linear-gradient(rgba(232, 239, 249, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(232, 239, 249, 0.045) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Display font on headings + branded surfaces. */
+h1, h2, h3, .font-display { font-family: var(--font-display); letter-spacing: 0.2px; }
+
+/* Cyanotype scrollbars. */
+* { scrollbar-width: thin; scrollbar-color: var(--color-line) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb { background: var(--color-line); border-radius: 6px; }
+*::-webkit-scrollbar-track { background: transparent; }
+
+/* Visible focus for keyboard users. */
+:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
