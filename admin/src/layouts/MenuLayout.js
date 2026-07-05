@@ -2,83 +2,102 @@ import { html } from '@arrow-js/core'
 import { go } from '../framework/router.js'
 import { routerState } from '../state/routerState.js'
 import { ToastContainer } from '../components/ToastContainer.js'
-import { Link } from '../components/Link.js'
 import { GearMark } from '../components/GearMark.js'
+import { Icon } from '../components/Icon.js'
 import { authState } from '../state/authState.js'
 
-const navItem =
-  'flex items-center gap-2.5 rounded-control px-3 py-2 text-sm text-fg-faint transition-colors hover:bg-surface-inset hover:text-fg-soft [&[aria-current=page]]:bg-brand-tint [&[aria-current=page]]:font-semibold [&[aria-current=page]]:text-brand'
-
-const groupLabel = 'px-3 pt-4 pb-1 font-mono text-[10px] uppercase tracking-[0.16em] text-fg-faint/70'
-
-/** The Cogworks console nav — grouped by operator intent (blank-canvas IA). */
+/** Feature nav — Supabase-style: icon + label, clear sections, each its own page. */
 const NAV = [
-  { group: null, items: [['/', 'Overview']] },
+  { group: null, items: [['/', 'Dashboard', 'dashboard']] },
   {
     group: 'Build',
     items: [
-      ['/collections', 'Data'],
-      ['/access', 'Access'],
-      ['/logic', 'Logic'],
-      ['/ai', 'AI'],
-      ['/files', 'Files'],
+      ['/collections', 'Data', 'data'],
+      ['/access', 'Auth', 'auth'],
+      ['/sql', 'SQL', 'sql'],
+      ['/logic', 'Logic', 'logic'],
+      ['/ai', 'AI', 'ai'],
+      ['/files', 'Storage', 'storage'],
     ],
   },
   {
     group: 'Operate',
     items: [
-      ['/realtime', 'Realtime'],
-      ['/observe', 'Observe'],
-      ['/sql', 'SQL runner'],
-      ['/operate', 'Settings'],
+      ['/realtime', 'Realtime', 'realtime'],
+      ['/observe', 'Logs', 'logs'],
+      ['/api-docs', 'API', 'apidocs'],
+      ['/operate', 'Settings', 'settings'],
     ],
   },
 ]
 
+const isActive = (/** @type {string} */ to) =>
+  to === '/' ? routerState.path === '/' : routerState.path === to || routerState.path.startsWith(to + '/')
+
+function sectionLabel() {
+  for (const s of NAV) for (const [to, label] of s.items) if (isActive(to)) return label
+  return ''
+}
+
+function navLink(/** @type {[string,string,string]} */ item) {
+  const [to, label, icon] = item
+  return html`
+    <a
+      href="${to}"
+      @click="${(/** @type {Event} */ e) => { e.preventDefault(); go(to) }}"
+      class="${() => `group flex items-center gap-2.5 rounded-control px-2.5 py-2 text-sm transition-colors ${
+        isActive(to) ? 'bg-brand-tint font-semibold text-brand' : 'text-fg-soft hover:bg-surface-hover hover:text-fg'
+      }`}"
+    >
+      <span class="${() => (isActive(to) ? 'text-brand' : 'text-fg-faint group-hover:text-fg-soft')}">${Icon({ name: icon, size: 17 })}</span>
+      <span>${label}</span>
+    </a>`
+}
+
 /** @param {any} content */
 export function MenuLayout(content) {
   return html`
-    <div class="grid min-h-screen grid-cols-1 lg:grid-cols-[240px_1fr]">
-      <aside class="flex flex-col border-b border-line bg-surface-raised lg:border-b-0 lg:border-r">
-        <div class="flex items-center gap-2.5 px-5 py-5">
-          ${GearMark({ size: 30 })}
-          <div class="flex flex-col leading-tight">
-            <span class="font-display text-[17px] font-semibold text-brand">Cogworks</span>
-            <span class="font-mono text-[9.5px] tracking-wide text-fg-faint">the works, without the work</span>
-          </div>
+    <div class="grid min-h-screen grid-cols-[224px_1fr]">
+      <aside class="sticky top-0 flex h-screen flex-col border-r border-line bg-surface">
+        <div class="flex items-center gap-2.5 px-4 py-4">
+          ${GearMark({ size: 26 })}
+          <span class="font-display text-lg font-semibold text-fg">Cogworks</span>
         </div>
 
-        <nav class="flex-1 overflow-y-auto px-3 pb-4">
+        <nav class="flex-1 space-y-3 overflow-y-auto px-3 pb-4">
           ${NAV.map(
             (section) => html`
-              ${section.group ? html`<div class="${groupLabel}">${section.group}</div>` : ''}
-              ${section.items.map(([to, label]) => Link({ to, children: label, class: navItem }))}
-            `,
+              <div class="space-y-0.5">
+                ${section.group ? html`<div class="px-2.5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-fg-faint/80">${section.group}</div>` : ''}
+                ${section.items.map((item) => navLink(/** @type {any} */ (item)))}
+              </div>`,
           )}
         </nav>
 
-        <div class="flex items-center justify-between border-t border-line px-5 py-3">
-          <span class="font-mono text-[10px] text-fg-faint">v0.1.0</span>
-          <span class="inline-flex items-center gap-1.5 font-mono text-[10px] text-fg-faint">
-            <span class="h-1.5 w-1.5 rounded-full" style="background: var(--color-ok)"></span> online
-          </span>
-        </div>
+        <details class="relative border-t border-line">
+          <summary class="flex cursor-pointer list-none items-center gap-2.5 px-4 py-3 hover:bg-surface-hover [&::-webkit-details-marker]:hidden">
+            <span class="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-brand-tint text-xs font-semibold text-brand">${() => (authState.admin?.email?.[0] ?? 'a').toUpperCase()}</span>
+            <span class="min-w-0 flex-1">
+              <span class="block truncate text-xs font-medium text-fg">${() => authState.admin?.email ?? 'admin'}</span>
+              <span class="block text-[10px] text-fg-faint">owner</span>
+            </span>
+            ${Icon({ name: 'chevronDown', size: 14, class: 'text-fg-faint' })}
+          </summary>
+          <div class="absolute bottom-full left-3 right-3 mb-1 rounded-panel border border-line bg-surface p-1 shadow-float">
+            <button class="flex w-full items-center gap-2 rounded-control px-3 py-2 text-left text-sm text-fg-soft hover:bg-surface-hover" @click="${async () => { await authState.signOut(); go('/login') }}">${Icon({ name: 'logout', size: 15 })} Sign out</button>
+          </div>
+        </details>
       </aside>
 
       <div class="flex min-h-screen flex-col">
-        <header class="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-surface-raised/85 px-6 py-3 backdrop-blur-sm">
-          <span class="font-mono text-xs text-fg-faint">${() => routerState.path}</span>
-          <details class="relative">
-            <summary class="flex cursor-pointer list-none items-center gap-2 rounded-full border border-line py-1 pl-3 pr-2 text-sm text-fg-soft [&::-webkit-details-marker]:hidden">
-              <span>${() => authState.admin?.email ?? 'admin'}</span>
-              <svg class="h-3 w-3 text-fg-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" /></svg>
-            </summary>
-            <div class="absolute right-0 top-full z-50 mt-2 w-44 rounded-panel border border-line bg-surface-raised shadow-float p-1.5">
-              <button class="w-full rounded-control px-3 py-2 text-left text-sm text-fg-soft hover:bg-surface-inset" @click="${async () => { await authState.signOut(); go('/login') }}">Sign out</button>
-            </div>
-          </details>
+        <header class="sticky top-0 z-10 flex items-center gap-2 border-b border-line bg-bg/90 px-6 py-3 backdrop-blur">
+          <span class="text-sm font-semibold text-fg">${() => sectionLabel()}</span>
+          <span class="text-fg-faint">/</span>
+          <span class="mono text-xs text-fg-faint">${() => routerState.path}</span>
+          <span class="ml-auto flex items-center gap-1.5 text-[11px] text-fg-faint">
+            <span class="dot" style="background:var(--color-ok)"></span> online
+          </span>
         </header>
-
         <main class="flex-1 p-6 lg:p-8">${content}</main>
       </div>
     </div>

@@ -11,6 +11,10 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': { target: 'http://localhost:8091', changeOrigin: true },
+      // Readiness/health live at /_/… on the backend; proxy the exact paths so
+      // they don't get swallowed by the SPA served under the /_/ base in dev.
+      '/_/ready': { target: 'http://localhost:8091', changeOrigin: true },
+      '/_/health': { target: 'http://localhost:8091', changeOrigin: true },
     },
   },
   build: {
