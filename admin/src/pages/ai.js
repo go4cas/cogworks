@@ -1,18 +1,16 @@
 import { html, reactive } from '@arrow-js/core'
 import { useMeta } from '../framework/index.js'
+import { useRouter } from '../composables/useRouter.js'
 import { api } from '../lib/api.js'
-import { Link } from '../components/Link.js'
+import { Icon } from '../components/Icon.js'
 
 export const meta = { layout: 'menu', title: 'AI' }
 
 function AiPage() {
-  useMeta({ title: 'AI & agents · Cogworks' })
+  useMeta({ title: 'AI · Cogworks' })
+  const router = useRouter()
 
-  const s = reactive(
-    /** @type {{ catalog: any, clients: any[]|null }} */
-    ({ catalog: null, clients: null }),
-  )
-
+  const s = reactive(/** @type {{ catalog: any, clients: any[]|null }} */ ({ catalog: null, clients: null }))
   api.get('/api/v1/admin/mcp/catalog').then((r) => { s.catalog = /** @type {any} */ (r)?.data ?? {} }).catch(() => { s.catalog = {} })
   api.get('/api/v1/admin/mcp/clients').then((r) => { s.clients = /** @type {any} */ (r)?.data ?? [] }).catch(() => { s.clients = [] })
 
@@ -21,19 +19,14 @@ function AiPage() {
     if (c && typeof c[k] === 'number') return c[k]
     return Array.isArray(s.catalog?.[k]) ? s.catalog[k].length : 0
   }
-
   const stat = (/** @type {string} */ label, /** @type {() => any} */ val) => html`
-    <div class="rounded-panel border border-line bg-surface-raised p-4 shadow-panel">
-      <div class="font-mono text-[10px] uppercase tracking-wider text-fg-faint">${label}</div>
-      <div class="mt-1 font-display text-2xl font-semibold text-fg">${val}</div>
-    </div>`
+    <div class="card p-4"><div class="field-label">${label}</div><div class="mt-1 font-display text-2xl font-semibold text-fg">${val}</div></div>`
 
   return html`
-    <div class="space-y-8">
+    <div class="space-y-5">
       <div>
-        <div class="font-mono text-[11px] uppercase tracking-[0.2em] text-brand">ai</div>
-        <h1 class="mt-1 font-display text-2xl font-semibold text-fg">AI &amp; agents</h1>
-        <p class="mt-1 text-sm text-fg-soft">Cogworks speaks the Model Context Protocol. Any agent can browse and query your data — scope-gated by API token.</p>
+        <h1 class="font-display text-2xl font-semibold text-fg">AI &amp; agents</h1>
+        <p class="mt-0.5 text-sm text-fg-soft">Cogworks speaks the Model Context Protocol — any agent can browse and query your data, scope-gated by API token.</p>
       </div>
 
       <div class="grid gap-4 sm:grid-cols-4">
@@ -43,27 +36,24 @@ function AiPage() {
         ${stat('Live clients', () => (s.clients === null ? '…' : s.clients.length))}
       </div>
 
-      <section class="rounded-panel border border-line bg-surface-raised p-5 shadow-panel">
-        <div class="flex items-center gap-2">
-          <span class="h-2 w-2 rounded-full" style="background:var(--color-ok)"></span>
-          <h2 class="font-mono text-[11px] uppercase tracking-wider text-fg-faint">Connect an agent</h2>
-        </div>
-        <p class="mt-3 text-sm text-fg-soft">Point any MCP client at the server's <span class="font-mono text-brand">/api/v1/mcp</span> endpoint with an API token that carries the <span class="font-mono">mcp</span> scope. Mint one under ${Link({ to: '/access', children: 'Access', class: 'text-brand hover:underline' })}.</p>
-      </section>
+      <div class="card card-pad">
+        <div class="flex items-center gap-2"><span class="dot" style="background:var(--color-ok)"></span><span class="card-title">Connect an agent</span></div>
+        <p class="mt-3 text-sm text-fg-soft">Point any MCP client at <span class="mono text-brand">/api/v1/mcp</span> with an API token carrying an <span class="mono">mcp</span> scope. Mint one under <button class="text-brand hover:underline" @click="${() => router.go('/access')}">Auth → API tokens</button>.</p>
+      </div>
 
-      <section class="overflow-hidden rounded-panel border border-line bg-surface-raised text-sm shadow-panel">
-        <div class="border-b border-line px-4 py-3 font-mono text-[11px] uppercase tracking-wider text-fg-faint">Tool catalog</div>
+      <div class="card overflow-hidden">
+        <div class="card-head"><span class="card-title">Tool catalog</span><span class="mono text-xs text-fg-faint">${() => (s.catalog === null ? '' : `${count('tools')} tools`)}</span></div>
         ${() => {
           const tools = s.catalog?.tools
-          if (s.catalog === null) return html`<div class="px-4 py-6 text-center text-fg-faint">Loading…</div>`
-          if (!tools || !tools.length) return html`<div class="px-4 py-6 text-center text-fg-faint">No tools — create a collection to expose MCP tools.</div>`
+          if (s.catalog === null) return html`<div class="p-8 text-center text-sm text-fg-faint">Loading…</div>`
+          if (!tools || !tools.length) return html`<div class="p-8 text-center text-sm text-fg-faint">No tools — create a collection to expose MCP tools.</div>`
           return html`<div>${tools.map((/** @type {any} */ t) => html`
-            <div class="border-b border-line/60 px-4 py-3">
-              <div class="font-mono text-xs text-brand">${t.name}</div>
+            <div class="trow px-4 py-3">
+              <div class="mono text-xs font-medium text-brand">${t.name}</div>
               <div class="mt-0.5 text-xs text-fg-soft">${t.description || ''}</div>
             </div>`.key(t.name))}</div>`
         }}
-      </section>
+      </div>
     </div>
   `
 }
