@@ -564,7 +564,7 @@
       bp.appendChild(btxt(156, 70.5, "cogworks", 10.5, "middle", "Archivo,sans-serif", 1.2));
       bp.appendChild(el("line", { x1: 107, y1: 75, x2: 205, y2: 75, stroke: C.gear, "stroke-width": 0.6 }));
       bp.appendChild(btxt(114, 83.5, "mfg no. 8090", 5));
-      bp.appendChild(btxt(198, 83.5, "ver 1.0.0", 5, "end"));
+      bp.appendChild(btxt(198, 83.5, "ver 0.1.0", 5, "end"));
       bp.appendChild(el("line", { x1: 107, y1: 87.5, x2: 205, y2: 87.5, stroke: C.gear, "stroke-width": 0.6 }));
       bp.appendChild(btxt(114, 95.5, "single binary", 5));
       bp.appendChild(btxt(198, 95.5, "gears 12", 5, "end"));
