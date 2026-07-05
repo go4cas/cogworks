@@ -77,9 +77,20 @@ export const CodeEditor = component(
   let editor = null
   onCleanup(() => editor?.dispose())
 
-  nextTick(() => {
+  let disposed = false
+  onCleanup(() => { disposed = true })
+
+  // The host div is committed to the live DOM by arrow.js on a later tick than
+  // `nextTick` fires, so getElementById races and can miss it. Poll across
+  // animation frames until the node is actually connected, then mount once.
+  const mount = (/** @type {number} */ attempt = 0) => {
+    if (disposed) return
     const el = document.getElementById(id)
-    if (!el || /** @type {any} */ (el).__mounted) return
+    if (!el || !el.isConnected) {
+      if (attempt < 60) requestAnimationFrame(() => mount(attempt + 1))
+      return
+    }
+    if (/** @type {any} */ (el).__mounted) return
     /** @type {any} */ (el).__mounted = true
     ensureTheme()
     if (language === 'sql' && tables) ensureSqlCompletion(tables)
@@ -97,8 +108,10 @@ export const CodeEditor = component(
       renderLineHighlight: 'line',
       scrollbar: { verticalScrollbarSize: 10, horizontalScrollbarSize: 10 },
     })
+    if (disposed) { editor.dispose(); editor = null; return }
     if (onChange) editor.onDidChangeModelContent(() => onChange(/** @type {any} */ (editor).getValue()))
-  })
+  }
+  nextTick(() => mount())
 
   return html`<div id="${id}" style="${`height:${height}px`}" class="overflow-hidden rounded-control border border-line"></div>`
 })
