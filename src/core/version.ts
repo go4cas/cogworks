@@ -4,4 +4,4 @@
  *
  * Bump in lockstep with `package.json` version + the git tag.
  */
-export const COGWORKS_VERSION = "0.11.5";
+export const COGWORKS_VERSION = "0.1.0";

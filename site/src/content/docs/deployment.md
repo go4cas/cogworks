@@ -14,7 +14,7 @@ signature), creates a service user and data directory, and installs a hardened s
 curl -fsSL https://get.cogworks.dev | sh
 
 # Options
-curl -fsSL https://get.cogworks.dev | sh -s -- --version v0.11.4
+curl -fsSL https://get.cogworks.dev | sh -s -- --version v0.1.0
 curl -fsSL https://get.cogworks.dev | sh -s -- --port 9000 --no-start
 curl -fsSL https://get.cogworks.dev | sh -s -- --verify-sig   # cosign keyless
 ```
