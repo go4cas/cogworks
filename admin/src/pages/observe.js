@@ -3,6 +3,7 @@ import { useMeta } from '../framework/index.js'
 import { useToast } from '../composables/useToast.js'
 import { api } from '../lib/api.js'
 import { Icon } from '../components/Icon.js'
+import { TabList } from '../components/Tabs.js'
 
 export const meta = { layout: 'menu', title: 'Logs' }
 
@@ -32,8 +33,6 @@ function LogsPage() {
 
   const stat = (/** @type {string} */ label, /** @type {() => any} */ val, /** @type {string} */ color) => html`
     <div class="card p-4"><div class="field-label">${label}</div><div class="mt-1 font-display text-2xl font-semibold" style="${`color:${color}`}">${val}</div></div>`
-  const tabBtn = (/** @type {string} */ t, /** @type {string} */ label) => html`
-    <button @click="${() => { s.tab = t }}" class="${() => `border-b-2 px-1 pb-2.5 pt-1 text-sm font-medium transition-colors ${s.tab === t ? 'border-brand text-fg' : 'border-transparent text-fg-faint hover:text-fg-soft'}`}">${label}</button>`
 
   return html`
     <div class="space-y-5">
@@ -52,8 +51,13 @@ function LogsPage() {
         ${stat('Dead', () => (s.queue === null ? '…' : sum('dead')), 'var(--color-bad)')}
       </div>
 
-      <div class="flex gap-5 border-b border-line">${tabBtn('requests', 'Requests')}${tabBtn('audit', 'Audit log')}${tabBtn('queue', 'Queue')}</div>
+      ${TabList({
+        tabs: [{ id: 'requests', label: 'Requests' }, { id: 'audit', label: 'Audit log' }, { id: 'queue', label: 'Queue' }],
+        active: () => s.tab,
+        onSelect: (id) => { s.tab = id },
+      })}
 
+      <div role="tabpanel" aria-labelledby="${() => `tab-${s.tab}`}" class="mt-5 space-y-5">
       ${() => s.tab === 'queue' ? html`
         <div class="card overflow-hidden">
           <div class="card-head"><span class="card-title">Queue jobs</span><button class="btn btn-secondary btn-sm" @click="${retryDead}">${Icon({ name: 'refresh', size: 13 })} Replay dead-letter</button></div>
@@ -113,6 +117,7 @@ function LogsPage() {
           }}
           </div>
         </div>` : ''}
+      </div>
     </div>
   `
 }

@@ -5,7 +5,7 @@ import { Icon } from './Icon.js'
 
 /**
  * @typedef {{ key:string, label:string, type?:'text'|'number'|'bool'|'password'|'textarea'|'select', help?:string, placeholder?:string, options?:string[], default?:any }} Field
- * @typedef {{ title:string, help?:string, fields:Field[], test?:{ label:string, run:()=>Promise<any> } }} Panel
+ * @typedef {{ title:string, help?:string, fields:Field[], test?:{ label:string, run:()=>Promise<any> }, collapsed?:boolean }} Panel
  */
 
 /**
@@ -53,7 +53,10 @@ export function SettingsPanels({ panels }) {
       control = vals[f.key]
         ? html`<input type="checkbox" checked @change="${(/** @type {any} */ e) => set(e.target.checked)}" />`
         : html`<input type="checkbox" @change="${(/** @type {any} */ e) => set(e.target.checked)}" />`
-      return html`<label class="flex items-center gap-2.5 py-1"><span>${control}</span><span class="text-sm text-fg">${f.label}</span>${f.help ? html`<span class="text-xs text-fg-faint">${f.help}</span>` : ''}</label>`
+      return html`<label class="flex items-center justify-between gap-3 rounded-control border border-line bg-surface-inset px-3 py-2">
+        <span class="min-w-0"><span class="text-sm text-fg">${f.label}</span>${f.help ? html`<span class="block text-xs text-fg-faint">${f.help}</span>` : ''}</span>
+        <span class="flex-none">${control}</span>
+      </label>`
     }
     if (t === 'select') {
       const cur = vals[f.key] ?? (f.options?.[0] ?? '')
@@ -70,19 +73,36 @@ export function SettingsPanels({ panels }) {
   return html`
     ${() => !s.loaded ? html`<div class="card p-8 text-center text-sm text-fg-faint">Loading settings…</div>` : html`
       <div class="space-y-4">
-        ${panels.map((p) => html`
-          <div class="card card-pad space-y-4">
-            <div class="flex items-center justify-between">
-              <div><div class="card-title">${p.title}</div>${p.help ? html`<div class="mt-0.5 text-xs text-fg-faint">${p.help}</div>` : ''}</div>
-              <div class="flex items-center gap-2">
-                ${p.test ? html`<button class="btn btn-secondary btn-sm" @click="${async () => { try { await p.test?.run(); toast.success('Test ok') } catch (/** @type {any} */ e) { toast.error(e?.message || 'Test failed') } }}">${p.test.label}</button>` : ''}
-                <button class="btn btn-primary btn-sm" aria-disabled="${() => (s.saving === p.title ? 'true' : 'false')}" @click="${() => savePanel(p)}">${() => (s.saving === p.title ? 'Saving…' : 'Save')}</button>
-              </div>
-            </div>
-            <div class="grid gap-3 sm:grid-cols-2">
-              ${p.fields.map((f) => html`<div class="${f.type === 'textarea' ? 'sm:col-span-2' : ''}">${field(f)}</div>`.key(f.key))}
-            </div>
-          </div>`.key(p.title))}
+        ${panels.map((p) => panelCard(p))}
       </div>`}
   `
+
+  function panelHead(/** @type {Panel} */ p) {
+    return html`
+      <div class="flex items-center justify-between">
+        <div><div class="card-title">${p.title}</div>${p.help ? html`<div class="mt-0.5 text-xs text-fg-faint">${p.help}</div>` : ''}</div>
+        <div class="flex items-center gap-2">
+          ${p.test ? html`<button class="btn btn-secondary btn-sm" @click="${async () => { try { await p.test?.run(); toast.success('Test ok') } catch (/** @type {any} */ e) { toast.error(e?.message || 'Test failed') } }}">${p.test.label}</button>` : ''}
+          <button class="btn btn-primary btn-sm" aria-disabled="${() => (s.saving === p.title ? 'true' : 'false')}" @click="${(/** @type {any} */ e) => { e.preventDefault(); savePanel(p) }}">${() => (s.saving === p.title ? 'Saving…' : 'Save')}</button>
+        </div>
+      </div>`
+  }
+  function panelBody(/** @type {Panel} */ p) {
+    return html`<div class="grid items-start gap-3 sm:grid-cols-2">
+      ${p.fields.map((f) => html`<div class="${f.type === 'textarea' || f.type === 'bool' ? 'sm:col-span-2' : ''}">${field(f)}</div>`.key(f.key))}
+    </div>`
+  }
+  function panelCard(/** @type {Panel} */ p) {
+    if (p.collapsed) {
+      return html`<details class="card card-pad">
+        <summary class="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
+          ${Icon({ name: 'chevronRight', size: 14, class: 'text-fg-faint' })}
+          <span class="card-title">${p.title}</span>${p.help ? html`<span class="text-xs text-fg-faint">— ${p.help}</span>` : ''}
+          <span class="ml-auto text-[10px] uppercase tracking-wide text-fg-faint">configure</span>
+        </summary>
+        <div class="mt-4 space-y-4">${panelHead(p)}${panelBody(p)}</div>
+      </details>`.key(p.title)
+    }
+    return html`<div class="card card-pad space-y-4">${panelHead(p)}${panelBody(p)}</div>`.key(p.title)
+  }
 }

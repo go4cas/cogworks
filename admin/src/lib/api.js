@@ -48,6 +48,41 @@ async function req(method, path, body) {
   return /** @type {Promise<T>} */ (res.json())
 }
 
+/**
+ * Download an authenticated endpoint as a file (blob), bypassing JSON parsing.
+ * @param {string} path @param {string} filename
+ */
+export async function apiDownload(path, filename) {
+  const token = getToken()
+  const res = await fetch(BASE + path, {
+    credentials: 'same-origin',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  if (!res.ok) {
+    let msg = `Download failed (${res.status})`
+    try { msg = (await res.json())?.error || msg } catch { /* not json */ }
+    throw new Error(msg)
+  }
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click()
+  a.remove(); URL.revokeObjectURL(url)
+}
+
+/**
+ * POST a raw (non-JSON) text body and return the parsed JSON response.
+ * @template T @param {string} path @param {string} text @param {string} [contentType]
+ * @returns {Promise<T>}
+ */
+export async function apiPostText(path, text, contentType = 'text/csv') {
+  const token = getToken()
+  /** @type {Record<string,string>} */ const headers = { 'Content-Type': contentType }
+  if (token) headers.Authorization = `Bearer ${token}`
+  const res = await fetch(BASE + path, { method: 'POST', credentials: 'same-origin', headers, body: text })
+  return /** @type {Promise<T>} */ (res.json())
+}
+
 export const api = {
   /** @template T @param {string} path @returns {Promise<T>} */
   get: (path) => req('GET', path),

@@ -108,6 +108,7 @@ h1, h2, h3, .font-display { font-family: var(--font-display); letter-spacing: 0.
 
   /* Surfaces */
   .card { border-radius: var(--radius-panel); border: 1px solid var(--color-line); background: var(--color-surface); box-shadow: var(--shadow-panel); }
+  .card-pad { padding: 1.25rem; }
   .card-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.75rem 1rem; border-bottom: 1px solid var(--color-line); }
   .card-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-fg-faint); }
 

@@ -4,6 +4,7 @@ import { useToast } from '../composables/useToast.js'
 import { api } from '../lib/api.js'
 import { CodeEditor } from '../components/CodeEditor.js'
 import { Icon } from '../components/Icon.js'
+import { TabList } from '../components/Tabs.js'
 
 export const meta = { layout: 'menu', title: 'Logic' }
 
@@ -42,16 +43,24 @@ const TYPES = {
       { key: 'type', label: 'Type', type: 'select', options: ['bool', 'string', 'number', 'json'] },
       { key: 'default_value', label: 'Default value' },
     ] },
+  segment: { kind: 'config', label: 'Segments', seg: 'flag-segments', idKey: 'name', noEnabled: true,
+    title: (/** @type {any} */ i) => i.name,
+    fresh: () => ({ name: '', description: '', conditions: '{}' }),
+    fields: [
+      { key: 'name', label: 'Name' },
+      { key: 'description', label: 'Description' },
+      { key: 'conditions', label: 'Conditions (JSON)', type: 'textarea', help: 'A condition tree, e.g. {"attr":"plan","op":"eq","value":"pro"}. Reusable across flag rules.' },
+    ] },
 }
-const ORDER = ['hook', 'route', 'job', 'webhook', 'flag']
+const ORDER = ['hook', 'route', 'job', 'webhook', 'flag', 'segment']
 
 function LogicPage() {
   useMeta({ title: 'Logic · Cogworks' })
   const toast = useToast()
 
   const s = reactive(
-    /** @type {{ type:string, lists:Record<string,any[]|null>, sel:any, creating:boolean, dirty:boolean, saving:boolean }} */
-    ({ type: 'hook', lists: { hook: null, route: null, job: null, webhook: null, flag: null }, sel: null, creating: false, dirty: false, saving: false }),
+    /** @type {{ type:string, lists:Record<string,any[]|null>, sel:any, creating:boolean, dirty:boolean, saving:boolean, deliveries:any[]|null }} */
+    ({ type: 'hook', lists: { hook: null, route: null, job: null, webhook: null, flag: null }, sel: null, creating: false, dirty: false, saving: false, deliveries: null }),
   )
   let draft = ''
   /** @type {Record<string,any>} */ let meta = {}
@@ -61,9 +70,20 @@ function LogicPage() {
 
   const idOf = (/** @type {any} */ item) => item[TYPES[s.type].idKey]
   function select(/** @type {any} */ item) {
-    s.sel = item; s.creating = false; s.dirty = false
+    s.sel = item; s.creating = false; s.dirty = false; s.deliveries = null
     if (TYPES[s.type].kind === 'code') draft = item.code || ''
-    else { meta = {}; for (const f of TYPES[s.type].fields) meta[f.key] = f.key === 'events' && Array.isArray(item[f.key]) ? item[f.key].join(', ') : (item[f.key] ?? '') }
+    else {
+      meta = {}
+      for (const f of TYPES[s.type].fields) {
+        if (f.key === 'events' && Array.isArray(item[f.key])) meta[f.key] = item[f.key].join(', ')
+        else if (f.key === 'conditions') meta[f.key] = typeof item[f.key] === 'object' && item[f.key] !== null ? JSON.stringify(item[f.key], null, 2) : (item[f.key] ?? '{}')
+        else meta[f.key] = item[f.key] ?? ''
+      }
+    }
+    if (s.type === 'webhook') loadDeliveries(item.id)
+  }
+  function loadDeliveries(/** @type {string} */ id) {
+    api.get(`/api/v1/admin/webhooks/${id}/deliveries`).then((r) => { s.deliveries = /** @type {any} */ (r)?.data ?? [] }).catch(() => { s.deliveries = [] })
   }
   function startNew() { s.creating = true; s.sel = null; s.dirty = false; meta = TYPES[s.type].fresh(); draft = meta.code || '' }
 
@@ -72,9 +92,10 @@ function LogicPage() {
     for (const f of TYPES[s.type].fields) {
       let v = meta[f.key]
       if (f.key === 'events') v = String(v || '').split(',').map((x) => x.trim()).filter(Boolean)
+      else if (f.key === 'conditions') { try { v = JSON.parse(String(v || '{}')) } catch { throw new Error('Conditions must be valid JSON') } }
       b[f.key] = v
     }
-    b.enabled = meta.enabled !== false
+    if (!TYPES[s.type].noEnabled) b.enabled = meta.enabled !== false
     return b
   }
 
@@ -117,15 +138,11 @@ function LogicPage() {
     try { await api.delete(`/api/v1/admin/${TYPES[t].seg}/${idOf(s.sel)}`); s.sel = null; await load(t); toast.success('Deleted') } catch (/** @type {any} */ e) { toast.error(e?.message || 'Delete failed') }
   }
 
-  const tabBtn = (/** @type {string} */ t) => html`
-    <button @click="${() => { s.type = t; s.sel = null; s.creating = false }}" class="${() => `flex items-center gap-1.5 border-b-2 px-1 pb-2.5 pt-1 text-sm font-medium transition-colors ${s.type === t ? 'border-brand text-fg' : 'border-transparent text-fg-faint hover:text-fg-soft'}`}">
-      ${TYPES[t].label}<span class="mono text-xs text-fg-faint">${() => { const l = s.lists[t]; return l ? l.length : '' }}</span>
-    </button>`
 
   function rowItem(/** @type {any} */ item) {
     return html`
       <button @click="${() => select(item)}" class="${() => `flex w-full items-center gap-2.5 rounded-control px-3 py-2.5 text-left text-sm transition-colors ${idOf(s.sel || {}) === idOf(item) && s.sel ? 'bg-brand-tint' : 'hover:bg-surface-hover'}`}">
-        ${led(!!item.enabled)}
+        ${TYPES[s.type].noEnabled ? html`<span class="dot" style="background:var(--color-fg-faint)"></span>` : led(!!item.enabled)}
         <span class="${() => `min-w-0 flex-1 truncate ${s.sel && idOf(s.sel) === idOf(item) ? 'text-brand' : 'text-fg'}`}">${TYPES[s.type].title(item)}</span>
         ${item.last_status ? html`<span class="mono text-[10px]" style="${`color:${STATUS_COLOR[item.last_status] ?? 'var(--color-fg-faint)'}`}">${item.last_status}</span>` : ''}
       </button>`
@@ -139,10 +156,38 @@ function LogicPage() {
         const t = f.type ?? 'text'
         const ctrl = t === 'select'
           ? html`<select class="select" @change="${(/** @type {any} */ e) => { meta[f.key] = e.target.value }}">${[meta[f.key] ?? f.options[0], ...f.options.filter((/** @type {any} */ o) => o !== (meta[f.key] ?? f.options[0]))].map((/** @type {any} */ o) => html`<option value="${o}">${o}</option>`.key(o))}</select>`
+          : t === 'textarea'
+          ? html`<textarea class="textarea mono" style="min-height:6rem;font-size:0.8rem" @input="${(/** @type {any} */ e) => { meta[f.key] = e.target.value }}">${meta[f.key] ?? ''}</textarea>`
           : html`<input class="input" type="${t === 'password' ? 'password' : 'text'}" placeholder="${t === 'password' ? '•••••• (unchanged)' : ''}" value="${meta[f.key] ?? ''}" @input="${(/** @type {any} */ e) => { meta[f.key] = e.target.value }}" />`
-        return html`<div>${metaField(f.label, ctrl)}${f.help ? html`<span class="mt-1 block text-xs text-fg-faint">${f.help}</span>` : ''}</div>`.key(f.key)
+        return html`<div class="${t === 'textarea' ? 'sm:col-span-2' : ''}">${metaField(f.label, ctrl)}${f.help ? html`<span class="mt-1 block text-xs text-fg-faint">${f.help}</span>` : ''}</div>`.key(f.key)
       })}
     </div>`
+  }
+
+  function webhookDeliveries() {
+    const dColor = (/** @type {string} */ st) => st === 'succeeded' ? 'var(--color-ok)' : (st === 'failed' || st === 'dead') ? 'var(--color-bad)' : 'var(--color-warn)'
+    return html`
+      <div class="border-t border-line p-4">
+        <div class="mb-2 flex items-center justify-between">
+          <span class="card-title">Recent deliveries</span>
+          <button class="btn btn-ghost btn-sm" @click="${() => loadDeliveries(s.sel.id)}">${Icon({ name: 'refresh', size: 13 })} Refresh</button>
+        </div>
+        ${() => {
+          if (s.deliveries === null) return html`<div class="p-4 text-center text-sm text-fg-faint">Loading…</div>`
+          if (!s.deliveries.length) return html`<div class="rounded-control border border-dashed border-line-strong p-5 text-center text-xs text-fg-faint">No deliveries yet. Hit <span class="text-fg">Test</span> above to fire one.</div>`
+          return html`<div class="tscroll rounded-control border border-line">
+            <div class="grid thead" style="grid-template-columns:1fr 1.4fr 4rem 6rem 1fr"><div class="tcell py-1.5!">Status</div><div class="tcell py-1.5!">Event</div><div class="tcell py-1.5!">Try</div><div class="tcell py-1.5!">HTTP</div><div class="tcell py-1.5!">When</div></div>
+            ${() => (s.deliveries ?? []).map((d) => html`
+              <div class="grid trow items-center" style="grid-template-columns:1fr 1.4fr 4rem 6rem 1fr">
+                <div class="tcell py-1.5!"><span class="badge" style="${`color:${dColor(d.status)}`}"><span class="dot" style="${`background:${dColor(d.status)}`}"></span>${d.status}</span></div>
+                <div class="tcell tcell-mono py-1.5! truncate text-fg-soft" title="${d.event}">${d.event}</div>
+                <div class="tcell tcell-mono py-1.5! text-fg-faint">#${d.attempt}</div>
+                <div class="tcell tcell-mono py-1.5! text-fg-faint">${d.response_status ?? '—'}</div>
+                <div class="tcell tcell-mono py-1.5! text-fg-faint">${new Date(((d.delivered_at ?? d.created_at) ?? 0) * 1000).toISOString().slice(5, 16).replace('T', ' ')}</div>
+              </div>`.key(d.id))}
+          </div>`
+        }}
+      </div>`
   }
 
   function editorPane() {
@@ -152,13 +197,13 @@ function LogicPage() {
         <div class="flex flex-wrap items-center gap-2 border-b border-line px-4 py-2.5">
           <span class="mono text-xs text-fg-faint">${() => (s.creating ? `new ${s.type}` : cfg.title(s.sel))}</span>
           <div class="ml-auto flex items-center gap-1.5">
-            ${() => s.creating ? '' : html`<button class="btn btn-secondary btn-sm" @click="${toggleEnabled}">${() => (s.sel.enabled ? 'Disable' : 'Enable')}</button>`}
+            ${() => (s.creating || TYPES[s.type].noEnabled) ? '' : html`<button class="btn btn-secondary btn-sm" @click="${toggleEnabled}">${() => (s.sel.enabled ? 'Disable' : 'Enable')}</button>`}
             ${() => (!s.creating && (s.type === 'job' || s.type === 'webhook')) ? html`<button class="btn btn-secondary btn-sm" @click="${runOrTest}">${Icon({ name: 'play', size: 13, fill: true })} ${s.type === 'job' ? 'Run' : 'Test'}</button>` : ''}
             ${() => s.creating ? '' : html`<button class="btn btn-danger btn-sm" @click="${remove}">${Icon({ name: 'trash', size: 13 })}</button>`}
             <button class="btn btn-primary btn-sm" aria-disabled="${() => ((cfg.kind === 'code' && !s.dirty && !s.creating) || s.saving ? 'true' : 'false')}" @click="${save}">${() => (s.saving ? 'Saving…' : s.creating ? 'Create' : 'Save')}</button>
           </div>
         </div>
-        ${() => cfg.kind === 'config' ? configForm() : html`
+        ${() => cfg.kind === 'config' ? html`${configForm()}${s.type === 'webhook' && !s.creating ? webhookDeliveries() : ''}` : html`
           ${() => s.creating ? html`
             <div class="grid gap-3 border-b border-line p-4 sm:grid-cols-2">
               ${s.type === 'hook' ? html`
@@ -184,7 +229,11 @@ function LogicPage() {
         <p class="mt-0.5 text-sm text-fg-soft">Everything that runs your business rules — code on events & requests, schedules, outbound webhooks, and feature flags.</p>
       </div>
 
-      <div class="flex flex-wrap gap-5 border-b border-line">${ORDER.map((t) => tabBtn(t))}</div>
+      ${TabList({
+        tabs: ORDER.map((t) => ({ id: t, label: html`${TYPES[t].label}<span class="mono text-xs text-fg-faint">${() => { const l = s.lists[t]; return l ? ` ${l.length}` : '' }}</span>` })),
+        active: () => s.type,
+        onSelect: (id) => { s.type = id; s.sel = null; s.creating = false },
+      })}
 
       <div class="grid gap-4 lg:grid-cols-[300px_1fr]">
         <div class="card flex flex-col">

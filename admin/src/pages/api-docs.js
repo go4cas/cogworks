@@ -1,7 +1,7 @@
 import { html, reactive } from '@arrow-js/core'
 import { useMeta } from '../framework/index.js'
 import { useToast } from '../composables/useToast.js'
-import { api } from '../lib/api.js'
+import { api, apiDownload } from '../lib/api.js'
 import { Icon } from '../components/Icon.js'
 
 export const meta = { layout: 'menu', title: 'API' }
@@ -15,7 +15,13 @@ function ApiDocsPage() {
   const origin = globalThis.location.origin
 
   const s = reactive(/** @type {{ list: any[]|null, sel: string }} */ ({ list: null, sel: 'auth' }))
-  api.get('/api/v1/collections').then((r) => { s.list = /** @type {any} */ (r)?.data ?? [] }).catch(() => { s.list = [] })
+  api.get('/api/v1/collections').then((r) => {
+    const list = /** @type {any[]} */ (/** @type {any} */ (r)?.data ?? [])
+    s.list = list
+    // Deep-link from a collection: /api-docs?c=<name> preselects it.
+    const want = new URLSearchParams(globalThis.location.search).get('c')
+    if (want && list.some((/** @type {any} */ c) => c.name === want)) s.sel = want
+  }).catch(() => { s.list = [] })
 
   const copy = (/** @type {string} */ code) => { navigator.clipboard?.writeText(code); toast.success('Copied') }
 
@@ -23,6 +29,18 @@ function ApiDocsPage() {
     <div class="card overflow-hidden">
       <div class="card-head"><span class="card-title">${title}</span><button class="btn btn-ghost btn-sm" @click="${() => copy(code)}">${Icon({ name: 'copy', size: 13 })} Copy</button></div>
       <pre class="overflow-x-auto bg-surface-inset p-4 text-xs leading-relaxed text-fg-soft"><code class="mono">${code}</code></pre>
+    </div>`
+
+  const epTable = (/** @type {[string,string,string][]} */ eps) => html`
+    <div class="card overflow-hidden">
+      <div class="card-head"><span class="card-title">Endpoints</span></div>
+      <div class="grid thead" style="grid-template-columns:5rem 2.4fr 3fr"><div class="tcell py-2!">Method</div><div class="tcell py-2!">Path</div><div class="tcell py-2!">Description</div></div>
+      ${eps.map(([m, path, desc]) => html`
+        <div class="grid trow" style="grid-template-columns:5rem 2.4fr 3fr">
+          <div class="tcell"><span class="mono text-xs font-semibold" style="${`color:${mcolor(m)}`}">${m}</span></div>
+          <div class="tcell tcell-mono truncate text-fg" title="${path}">${path}</div>
+          <div class="tcell truncate text-sm text-fg-soft" title="${desc}">${desc}</div>
+        </div>`.key(m + path))}
     </div>`
 
   const navItem = (/** @type {string} */ id, /** @type {string} */ label, /** @type {string} */ icon) => html`
@@ -43,6 +61,14 @@ function ApiDocsPage() {
           <div class="space-y-0.5">
             <div class="px-2.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-faint">Getting started</div>
             ${navItem('auth', 'Authentication', 'auth')}
+            ${navItem('resources', 'Resources & SDK', 'download')}
+          </div>
+          <div class="space-y-0.5">
+            <div class="px-2.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-faint">Platform APIs</div>
+            ${navItem('oauth2', 'OAuth2 sign-in', 'auth')}
+            ${navItem('batch', 'Batch', 'logic')}
+            ${navItem('files', 'Files', 'storage')}
+            ${navItem('realtime', 'Realtime', 'realtime')}
           </div>
           <div class="space-y-0.5">
             <div class="px-2.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-fg-faint">Collections</div>
@@ -55,7 +81,13 @@ function ApiDocsPage() {
         </div>
 
         <div>
-          ${() => (s.sel === 'auth' ? authSection() : collectionSection(s.sel))}
+          ${() => s.sel === 'auth' ? authSection()
+            : s.sel === 'resources' ? resourcesSection()
+            : s.sel === 'oauth2' ? oauth2Section()
+            : s.sel === 'batch' ? batchSection()
+            : s.sel === 'files' ? filesSection()
+            : s.sel === 'realtime' ? realtimeSection()
+            : collectionSection(s.sel)}
         </div>
       </div>
     </div>
@@ -75,6 +107,100 @@ function ApiDocsPage() {
         </div>
         ${snippet('cURL', curl)}
         ${snippet('JavaScript SDK', js)}
+      </div>`
+  }
+
+  function intro(/** @type {string} */ title, /** @type {any} */ body) {
+    return html`
+      <div class="card card-pad"><h2 class="font-display text-lg font-semibold text-fg">${title}</h2><p class="mt-1 text-sm text-fg-soft">${body}</p></div>`
+  }
+
+  function resourcesSection() {
+    const dl = async (/** @type {string} */ path, /** @type {string} */ fn) => { try { await apiDownload(path, fn) } catch (/** @type {any} */ e) { toast.error(e?.message || 'Download failed') } }
+    const resCard = (/** @type {string} */ title, /** @type {any} */ desc, /** @type {any} */ action) => html`
+      <div class="card card-pad flex items-center justify-between gap-3">
+        <div><div class="text-sm font-medium text-fg">${title}</div><div class="text-xs text-fg-faint">${desc}</div></div>
+        ${action}
+      </div>`
+    return html`
+      <div class="space-y-4">
+        ${intro('Resources & SDK', html`Machine-readable contracts for your API — generate clients, wire up monitoring, or explore interactively. The OpenAPI surface is gated by the <span class="mono text-fg">docs.enabled</span> setting (on by default).`)}
+        ${resCard('OpenAPI spec', html`The full <span class="mono text-fg">openapi.json</span> — import into Postman, Insomnia, or a codegen tool.`, html`<button class="btn btn-secondary btn-sm" @click="${() => dl('/api/v1/openapi.json', 'cogworks-openapi.json')}">${Icon({ name: 'download', size: 13 })} Download</button>`)}
+        ${resCard('TypeScript SDK types', html`Generated <span class="mono text-fg">types.ts</span> matching your collections — drop into a TS project.`, html`<button class="btn btn-secondary btn-sm" @click="${() => dl('/api/v1/sdk/types.ts', 'cogworks-types.ts')}">${Icon({ name: 'download', size: 13 })} Download</button>`)}
+        ${resCard('Interactive API explorer', html`Swagger UI served at <span class="mono text-fg">/api/v1/docs</span> — try endpoints in the browser.`, html`<a class="btn btn-secondary btn-sm" href="${`${origin}/api/v1/docs`}" target="_blank" rel="noopener">${Icon({ name: 'external', size: 13 })} Open</a>`)}
+        ${resCard('Prometheus metrics', html`Scrape <span class="mono text-fg">${origin}/api/v1/metrics</span> for request rates, latencies, and queue depth. Enable <span class="mono text-fg">metrics.enabled</span> in Settings first.`, html`<button class="btn btn-secondary btn-sm" @click="${() => { navigator.clipboard?.writeText(`${origin}/api/v1/metrics`); toast.success('URL copied') }}">${Icon({ name: 'copy', size: 13 })} Copy URL</button>`)}
+      </div>`
+  }
+
+  function oauth2Section() {
+    const authCol = (s.list ?? []).find((/** @type {any} */ c) => c.type === 'auth')?.name ?? 'users'
+    /** @type {[string,string,string][]} */
+    const eps = [
+      ['GET', `/api/v1/auth/${authCol}/oauth2/providers`, 'List enabled providers'],
+      ['GET', `/api/v1/auth/${authCol}/oauth2/authorize`, 'Build an authorize URL — ?provider=&redirectUri=&state='],
+      ['POST', `/api/v1/auth/${authCol}/oauth2/exchange`, 'Exchange the callback code for a session token'],
+      ['POST', `/api/v1/auth/${authCol}/oauth2/merge-confirm`, 'Confirm linking when the email already exists'],
+      ['DELETE', `/api/v1/auth/${authCol}/oauth2/:provider/unlink`, 'Unlink a provider from the signed-in user'],
+    ]
+    const flow = `# 1. Get the provider's authorize URL (server can handle PKCE)\ncurl "${origin}/api/v1/auth/${authCol}/oauth2/authorize?provider=google&redirectUri=${origin}/callback&use_pkce=1"\n# → { "data": { "authorize_url": "https://accounts.google.com/…" } }\n\n# 2. Redirect the user there. On callback, exchange the code:\ncurl -X POST ${origin}/api/v1/auth/${authCol}/oauth2/exchange \\\n  -H "Content-Type: application/json" \\\n  -d '{ "provider": "google", "code": "<code>", "redirectUri": "${origin}/callback" }'\n# → { "data": { "token": "…", "record": { "id": "…", "email": "…" } } }`
+    return html`
+      <div class="space-y-4">
+        ${intro('OAuth2 sign-in', html`Social + OIDC login is scoped to an <span class="mono text-fg">auth</span> collection. Enable providers under <span class="mono text-fg">Auth → Configuration</span>, then run the authorize → exchange flow below. Server-side PKCE is supported via <span class="mono text-fg">use_pkce=1</span>.`)}
+        ${epTable(eps)}
+        ${snippet('Authorize → exchange — cURL', flow)}
+      </div>`
+  }
+
+  function batchSection() {
+    /** @type {[string,string,string][]} */
+    const eps = [['POST', '/api/v1/batch', 'Run up to 100 writes atomically — all succeed or all roll back']]
+    const body = `curl -X POST ${origin}/api/v1/batch \\\n  -H "Authorization: Bearer <TOKEN>" \\\n  -H "Content-Type: application/json" \\\n  -d '{\n    "requests": [\n      { "method": "POST",  "url": "/api/v1/posts", "body": { "title": "A" } },\n      { "method": "PATCH", "url": "/api/v1/posts/abc", "body": { "title": "B" } },\n      { "method": "DELETE","url": "/api/v1/posts/xyz" }\n    ]\n  }'\n# → { "data": [ { "status": 200, "body": {…} }, … ] }  (in request order)`
+    return html`
+      <div class="space-y-4">
+        ${intro('Batch', html`Send several writes in one transaction. Any failing request rolls back the whole batch, so partial updates never land. Responses come back in request order with each sub-status.`)}
+        ${epTable(eps)}
+        ${snippet('Atomic batch — cURL', body)}
+      </div>`
+  }
+
+  function filesSection() {
+    /** @type {[string,string,string][]} */
+    const eps = [
+      ['POST', '/api/v1/files/:collection/:recordId/:field', 'Upload — multipart form, field name "file"'],
+      ['POST', '/api/v1/files/:collection/:recordId/:field/:filename/token', 'Mint a short-lived access token for a private file'],
+      ['GET', '/api/v1/files/:filename', 'Serve bytes — ?token=… and optional ?thumb=…'],
+      ['DELETE', '/api/v1/files/:collection/:recordId/:field/:filename', 'Delete one file from a field'],
+    ]
+    const up = `curl -X POST ${origin}/api/v1/files/posts/abc123/cover \\\n  -H "Authorization: Bearer <TOKEN>" \\\n  -F "file=@./cover.jpg"\n# → { "data": { "id": "…", "filename": "u1.jpg", "size": 20481, "mimeType": "image/jpeg" } }`
+    const get = `# Private file: mint a token, then fetch\ncurl -X POST ${origin}/api/v1/files/posts/abc123/cover/u1.jpg/token \\\n  -H "Authorization: Bearer <TOKEN>"\n# → { "data": { "token": "…", "expires_at": 1730000000 } }\n\ncurl "${origin}/api/v1/files/u1.jpg?token=<FILE_TOKEN>&thumb=300x300" -o cover.jpg`
+    return html`
+      <div class="space-y-4">
+        ${intro('Files', html`Upload to a record's <span class="mono text-fg">file</span> field with multipart form data. Private files are served via short-lived, optionally IP-bound tokens; add <span class="mono text-fg">?thumb=WxH</span> for image thumbnails.`)}
+        ${epTable(eps)}
+        ${snippet('Upload — cURL', up)}
+        ${snippet('Access a private file — cURL', get)}
+      </div>`
+  }
+
+  function realtimeSection() {
+    const wsOrigin = origin.replace(/^http/, 'ws')
+    /** @type {[string,string,string][]} */
+    const eps = [
+      ['GET', '/realtime', 'WebSocket upgrade — primary transport'],
+      ['GET', '/api/v1/realtime', 'SSE stream — fallback, returns a clientId'],
+      ['POST', '/api/v1/realtime', 'Set subscriptions for an SSE clientId'],
+      ['GET', '/api/v1/realtime/presence/:channel', 'Snapshot of a presence channel'],
+    ]
+    const ws = `const ws = new WebSocket('${wsOrigin}/realtime')\n\nws.onopen = () => {\n  ws.send(JSON.stringify({ type: 'auth', token: '<TOKEN>' }))\n  // topics: "<collection>", "<collection>/<id>", "<collection>.create", or "*"\n  ws.send(JSON.stringify({ type: 'subscribe', topics: ['posts'] }))\n}\n\nws.onmessage = (e) => {\n  const msg = JSON.parse(e.data)\n  // { type: 'create'|'update', collection, record }\n  // { type: 'delete', collection, id }\n  console.log(msg)\n}`
+    const sse = `// SSE fallback — no WebSocket needed\nconst es = new EventSource('${origin}/api/v1/realtime')\nlet clientId\nes.addEventListener('open', (e) => { clientId = JSON.parse(e.data).clientId })\nes.onmessage = (e) => console.log(JSON.parse(e.data))\n\n// then set subscriptions for that clientId\nawait fetch('${origin}/api/v1/realtime', {\n  method: 'POST',\n  headers: { 'Content-Type': 'application/json' },\n  body: JSON.stringify({ clientId, topics: ['posts'], token: '<TOKEN>' }),\n})\n// resume after a drop with ?lastEventId=<id> or the Last-Event-ID header`
+    const presence = `// Presence — track who is on a channel (WebSocket)\nws.send(JSON.stringify({ type: 'presence-track', channel: 'room:42', state: { typing: false } }))\nws.send(JSON.stringify({ type: 'presence-untrack', channel: 'room:42' }))\n\nws.onmessage = (e) => {\n  const m = JSON.parse(e.data)\n  // { type: 'presence-state', channel, state }   full snapshot\n  // { type: 'presence', channel, event: 'join'|'update'|'leave', key, state }\n}\n\n// HTTP snapshot of a channel\n// GET ${origin}/api/v1/realtime/presence/room:42`
+    return html`
+      <div class="space-y-4">
+        ${intro('Realtime', html`Subscribe to live record changes over a WebSocket (<span class="mono text-fg">/realtime</span>) or the SSE fallback (<span class="mono text-fg">/api/v1/realtime</span>). Authenticate, subscribe to collection / per-record / event topics, and use presence channels to track who's online.`)}
+        ${epTable(eps)}
+        ${snippet('WebSocket — record changes', ws)}
+        ${snippet('SSE fallback', sse)}
+        ${snippet('Presence', presence)}
       </div>`
   }
 

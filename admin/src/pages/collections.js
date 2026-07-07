@@ -9,7 +9,7 @@ export const meta = { layout: 'menu', title: 'Data' }
 
 /** @type {Record<string, string>} */
 const KIND_COLOR = { base: 'var(--color-brand)', auth: 'var(--color-ok)', view: 'var(--color-warn)' }
-const FIELD_TYPES = ['text', 'number', 'bool', 'email', 'url', 'date', 'json']
+const FIELD_TYPES = ['text', 'editor', 'number', 'bool', 'email', 'url', 'date', 'json', 'select', 'relation', 'file', 'geoPoint', 'vector']
 
 function CollectionsPage() {
   useMeta({ title: 'Data · Cogworks' })
@@ -70,7 +70,7 @@ function CollectionsPage() {
         ${() => {
           if (s.list === null) return html`<div class="p-8 text-center text-sm text-fg-faint">Loading…</div>`
           if (!s.list.length) return html`<div class="p-8 text-center text-sm text-fg-faint">No collections yet. Create one to get started.</div>`
-          return html`<div>${s.list.map((c) => html`
+          return html`<div class="tscroll">${s.list.map((c) => html`
             <button class="grid trow w-full cursor-pointer items-center text-left" style="grid-template-columns:1.8fr 0.7fr 0.6fr 0.8fr" @click="${() => router.go(`/collections/${c.id}`)}">
               <div class="tcell flex items-center gap-2">
                 <span class="text-fg-faint">${Icon({ name: 'data', size: 15 })}</span>

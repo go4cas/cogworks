@@ -9,7 +9,8 @@ export const meta = { layout: 'menu', title: 'Operations' }
 function OperationsPage() {
   useMeta({ title: 'Operations · Cogworks' })
   const toast = useToast()
-  const s = reactive(/** @type {{ busy:string, snapshot:any }} */ ({ busy: '', snapshot: null }))
+  const s = reactive(/** @type {{ busy:string, snapshot:any, diff:any, applyMode:string, applyResult:any }} */ ({ busy: '', snapshot: null, diff: null, applyMode: 'additive', applyResult: null }))
+  /** @type {any} */ let uploadedSnap = null
 
   async function downloadBackup() {
     s.busy = 'backup'
@@ -53,6 +54,35 @@ function OperationsPage() {
     URL.revokeObjectURL(url)
   }
 
+  async function onSnapshotFile(/** @type {any} */ e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    s.diff = null; s.applyResult = null
+    s.busy = 'diff'
+    try {
+      uploadedSnap = JSON.parse(await file.text())
+      const r = /** @type {any} */ (await api.post('/api/v1/admin/migrations/diff', { snapshot: uploadedSnap }))
+      if (r?.error) throw new Error(r.error)
+      s.diff = r?.data ?? null
+    } catch (/** @type {any} */ err) { toast.error(err?.message || 'Could not diff snapshot'); uploadedSnap = null } finally { s.busy = '' }
+  }
+  async function applyMigration() {
+    if (!uploadedSnap) return
+    const label = s.applyMode === 'sync' ? 'SYNC (may drop columns/collections)' : 'additive'
+    if (!globalThis.confirm(`Apply this snapshot in ${label} mode?`)) return
+    s.busy = 'apply'
+    try {
+      const r = /** @type {any} */ (await api.post('/api/v1/admin/migrations/apply', { snapshot: uploadedSnap, mode: s.applyMode }))
+      if (r?.error) throw new Error(r.error)
+      s.applyResult = r?.data ?? null
+      const d = s.applyResult
+      if (d?.errors?.length) toast.warning(`Applied with ${d.errors.length} error(s)`)
+      else toast.success(`Applied — ${d.created.length} created, ${d.updated.length} updated`)
+      s.diff = null; uploadedSnap = null
+    } catch (/** @type {any} */ e) { toast.error(e?.message || 'Apply failed') } finally { s.busy = '' }
+  }
+
   return html`
     <div class="space-y-5">
       <div>
@@ -90,6 +120,55 @@ function OperationsPage() {
           ${() => s.snapshot
             ? html`<pre class="tscroll overflow-x-auto rounded-control bg-surface-inset p-4 text-xs text-fg-soft"><code class="mono">${JSON.stringify(s.snapshot, null, 2)}</code></pre>`
             : html`<div class="rounded-control border border-dashed border-line-strong p-6 text-center text-sm text-fg-faint">Load the current schema snapshot to view or download it.</div>`}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Apply a migration</span>
+          <label class="btn btn-secondary btn-sm cursor-pointer">${Icon({ name: 'upload', size: 13 })} ${() => (s.busy === 'diff' ? 'Diffing…' : 'Upload snapshot')}<input type="file" accept=".json,application/json" class="hidden" @change="${onSnapshotFile}" /></label>
+        </div>
+        <div class="card-pad space-y-4">
+          <p class="text-sm text-fg-soft">Upload a schema snapshot from another environment. Cogworks shows what would change, then applies it — <span class="mono text-fg">additive</span> only adds new collections/fields; <span class="mono text-fg">sync</span> also removes what's not in the snapshot.</p>
+
+          ${() => {
+            if (s.applyResult) {
+              const d = s.applyResult
+              return html`<div class="rounded-control border border-line p-4 space-y-2">
+                <div class="text-sm font-medium" style="color:var(--color-ok)">Migration applied</div>
+                <div class="flex flex-wrap gap-4 text-xs text-fg-soft">
+                  <span><span class="mono text-fg">${d.created.length}</span> created</span>
+                  <span><span class="mono text-fg">${d.updated.length}</span> updated</span>
+                  <span><span class="mono text-fg">${d.skipped.length}</span> skipped</span>
+                  <span style="${d.errors.length ? 'color:var(--color-bad)' : ''}"><span class="mono">${d.errors.length}</span> errors</span>
+                </div>
+                ${d.errors.length ? html`<ul class="mt-1 space-y-0.5 text-xs" style="color:var(--color-bad)">${d.errors.map((/** @type {any} */ er) => html`<li class="mono">${typeof er === 'string' ? er : JSON.stringify(er)}</li>`)}</ul>` : ''}
+              </div>`
+            }
+            if (!s.diff) return html`<div class="rounded-control border border-dashed border-line-strong p-6 text-center text-sm text-fg-faint">Upload a snapshot JSON to preview the diff.</div>`
+            const d = s.diff
+            const group = (/** @type {string} */ label, /** @type {any[]} */ items, /** @type {string} */ color) => items.length
+              ? html`<div><div class="mb-1 text-xs font-semibold" style="${`color:${color}`}">${label} (${items.length})</div><div class="space-y-1">${items.map((/** @type {any} */ it) => html`
+                  <div class="rounded bg-surface-inset px-2.5 py-1.5 text-xs">
+                    <span class="mono text-fg">${it.name}</span>${it.type ? html`<span class="ml-1.5 text-fg-faint">${it.type}</span>` : ''}
+                    ${it.changes?.length ? html`<ul class="mt-1 ml-3 list-disc space-y-0.5 text-fg-faint">${it.changes.map((/** @type {any} */ ch) => html`<li>${typeof ch === 'string' ? ch : JSON.stringify(ch)}</li>`)}</ul>` : ''}
+                  </div>`.key(it.name))}</div></div>`
+              : ''
+            return html`
+              <div class="grid gap-4 sm:grid-cols-2">
+                ${group('Added', d.added, 'var(--color-ok)')}
+                ${group('Modified', d.modified, 'var(--color-warn)')}
+                ${group('Removed', d.removed, 'var(--color-bad)')}
+                ${d.unchanged.length ? html`<div><div class="mb-1 text-xs font-semibold text-fg-faint">Unchanged (${d.unchanged.length})</div></div>` : ''}
+              </div>
+              <div class="flex items-center gap-3 border-t border-line pt-3">
+                <label class="flex items-center gap-1.5 text-xs text-fg-soft">Mode
+                  <select class="select" style="width:9rem" @change="${(/** @type {any} */ e) => { s.applyMode = e.target.value }}">${['additive', 'sync'].map((m) => html`<option value="${m}">${m}</option>`.key(m))}</select>
+                </label>
+                <button class="btn btn-primary" aria-disabled="${() => (s.busy === 'apply' ? 'true' : 'false')}" @click="${applyMigration}">${() => (s.busy === 'apply' ? 'Applying…' : 'Apply migration')}</button>
+                ${(d.added.length + d.modified.length + d.removed.length) === 0 ? html`<span class="text-xs text-fg-faint">Nothing to apply — already in sync.</span>` : ''}
+              </div>`
+          }}
         </div>
       </div>
     </div>
