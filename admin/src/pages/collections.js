@@ -4,12 +4,12 @@ import { useRouter } from '../composables/useRouter.js'
 import { useToast } from '../composables/useToast.js'
 import { api, parseFields } from '../lib/api.js'
 import { Icon } from '../components/Icon.js'
+import { FIELD_TYPES, fieldOut, fieldOptionControls } from '../lib/fieldEditor.js'
 
 export const meta = { layout: 'menu', title: 'Data' }
 
 /** @type {Record<string, string>} */
 const KIND_COLOR = { base: 'var(--color-brand)', auth: 'var(--color-ok)', view: 'var(--color-warn)' }
-const FIELD_TYPES = ['text', 'editor', 'number', 'bool', 'email', 'url', 'date', 'json', 'select', 'relation', 'file', 'geoPoint', 'vector']
 
 function CollectionsPage() {
   useMeta({ title: 'Data · Cogworks' })
@@ -17,31 +17,32 @@ function CollectionsPage() {
   const toast = useToast()
 
   const s = reactive(
-    /** @type {{ list: any[]|null, creating: boolean, ctype: string, rows: {id:number}[], busy: boolean }} */
-    ({ list: null, creating: false, ctype: 'base', rows: [], busy: false }),
+    /** @type {{ list: any[]|null, creating: boolean, ctype: string, rows: {id:number}[], busy: boolean, rev: number }} */
+    ({ list: null, creating: false, ctype: 'base', rows: [], busy: false, rev: 0 }),
   )
   let name = ''
   let viewQuery = ''
-  /** @type {Record<number,{name:string,type:string}>} */ let fieldVals = {}
+  /** @type {Record<number,any>} */ let fieldDraft = {}
   let rowSeq = 0
 
   const load = () => api.get('/api/v1/collections').then((r) => { s.list = /** @type {any} */ (r)?.data ?? [] }).catch(() => { s.list = [] })
   load()
 
   function openCreate() {
-    name = ''; s.ctype = 'base'; viewQuery = 'SELECT id, created, updated FROM cw_posts'; fieldVals = {}; rowSeq = 0
-    const first = rowSeq++; fieldVals[first] = { name: '', type: 'text' }
+    name = ''; s.ctype = 'base'; viewQuery = 'SELECT id, created, updated FROM cw_posts'; fieldDraft = {}; rowSeq = 0
+    const first = rowSeq++; fieldDraft[first] = { name: '', type: 'text', required: false }
     s.rows = [{ id: first }]; s.creating = true
   }
-  const addField = () => { const id = rowSeq++; fieldVals[id] = { name: '', type: 'text' }; s.rows = [...s.rows, { id }] }
-  const removeField = (/** @type {number} */ id) => { delete fieldVals[id]; s.rows = s.rows.filter((r) => r.id !== id) }
+  const addField = () => { const id = rowSeq++; fieldDraft[id] = { name: '', type: 'text', required: false }; s.rows = [...s.rows, { id }] }
+  const removeField = (/** @type {number} */ id) => { delete fieldDraft[id]; s.rows = s.rows.filter((r) => r.id !== id) }
+  const colNames = () => (s.list ?? []).map((/** @type {any} */ c) => c.name)
 
   async function create() {
     if (s.busy) return
     if (!name.trim()) { toast.error('Collection name is required'); return }
     /** @type {any} */ const body = { name: name.trim(), type: s.ctype }
     if (s.ctype === 'view') body.view_query = viewQuery.trim()
-    else body.fields = s.rows.map((r) => fieldVals[r.id]).filter((f) => f && f.name.trim()).map((f) => ({ name: f.name.trim(), type: f.type }))
+    else body.fields = s.rows.map((r) => fieldDraft[r.id]).filter((f) => f && f.name.trim()).map(fieldOut)
     s.busy = true
     try {
       const r = /** @type {any} */ (await api.post('/api/v1/collections', body))
@@ -98,12 +99,18 @@ function CollectionsPage() {
           ? html`<label class="space-y-1"><span class="field-label">View query (read-only SQL)</span><textarea class="textarea mono" style="min-height:6rem;font-size:0.8rem" @input="${(/** @type {any} */ e) => { viewQuery = e.target.value }}">SELECT id, created, updated FROM cw_posts</textarea></label>`
           : html`<div class="space-y-2">
               <span class="field-label">Fields</span>
-              ${() => s.rows.map((row) => html`
-                <div class="flex items-center gap-2">
-                  <input class="input flex-1" placeholder="field name" value="${fieldVals[row.id]?.name ?? ''}" @input="${(/** @type {any} */ e) => { fieldVals[row.id].name = e.target.value }}" />
-                  <select class="select" style="width:9rem" @change="${(/** @type {any} */ e) => { fieldVals[row.id].type = e.target.value }}">${FIELD_TYPES.map((t) => html`<option value="${t}">${t}</option>`.key(t))}</select>
-                  <button class="btn btn-ghost btn-icon" @click="${() => removeField(row.id)}">${Icon({ name: 'x', size: 15 })}</button>
-                </div>`.key(row.id))}
+              ${() => { void s.rev; return s.rows.map((row) => html`
+                <div class="rounded-control border border-line p-3">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <input class="input flex-1" style="min-width:10rem" placeholder="field name" value="${fieldDraft[row.id]?.name ?? ''}" @input="${(/** @type {any} */ e) => { fieldDraft[row.id].name = e.target.value }}" />
+                    <select class="select" style="width:9rem" @change="${(/** @type {any} */ e) => { fieldDraft[row.id].type = e.target.value; s.rev++ }}">${[fieldDraft[row.id]?.type ?? 'text', ...FIELD_TYPES.filter((t) => t !== (fieldDraft[row.id]?.type ?? 'text'))].map((t) => html`<option value="${t}">${t}</option>`.key(t))}</select>
+                    ${fieldDraft[row.id]?.required
+                      ? html`<label class="flex items-center gap-1.5 text-xs text-fg-soft"><input type="checkbox" checked @change="${(/** @type {any} */ e) => { fieldDraft[row.id].required = e.target.checked }}" />required</label>`
+                      : html`<label class="flex items-center gap-1.5 text-xs text-fg-soft"><input type="checkbox" @change="${(/** @type {any} */ e) => { fieldDraft[row.id].required = e.target.checked }}" />required</label>`}
+                    <button class="btn btn-ghost btn-icon" title="Remove" @click="${() => removeField(row.id)}">${Icon({ name: 'trash', size: 14 })}</button>
+                  </div>
+                  <div class="mt-2 border-t border-line/60 pt-2">${fieldOptionControls(fieldDraft, row.id, colNames())}</div>
+                </div>`.key(`${row.id}:${fieldDraft[row.id]?.type ?? 'text'}`)) }}
               <button class="btn btn-secondary btn-sm" @click="${addField}">${Icon({ name: 'plus', size: 14 })} Add field</button>
             </div>`}
         <button class="btn btn-primary" aria-disabled="${() => (s.busy ? 'true' : 'false')}" @click="${create}">${() => (s.busy ? 'Creating…' : 'Create collection')}</button>
